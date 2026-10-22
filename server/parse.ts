@@ -36,9 +36,9 @@ function summarize(name: string, input: any): string {
         return 'WebFetch';
       }
     case 'AskUserQuestion':
-      return clip(input.questions?.[0]?.question ?? '질문이 있어요', 60);
+      return clip(input.questions?.[0]?.question ?? '', 60);
     case 'ExitPlanMode':
-      return '계획 검토 부탁드려요';
+      return ''; // 문구는 화면 언어에 맞춰 브라우저가 채운다
     case 'TaskCreate':
       return clip(input.subject, 40);
     case 'Skill':

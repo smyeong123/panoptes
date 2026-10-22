@@ -26,13 +26,17 @@
           <div id="floor-name">사무실을 찾는 중…</div>
           <div id="store-name"></div>
         </div>
-        <div class="theme-toggle" role="group" aria-label="테마">
-          <button type="button" data-theme="auto" title="시스템 설정 따라가기">🖥️ 자동</button>
-          <button type="button" data-theme="light" title="라이트 모드">☀️ 라이트</button>
-          <button type="button" data-theme="dark" title="다크 모드">🌙 다크</button>
+        <div class="theme-toggle" role="group" aria-label="테마" data-i18n-aria="theme.group">
+          <button type="button" data-theme="auto" title="시스템 설정 따라가기" data-i18n="theme.auto" data-i18n-title="theme.autoTitle">🖥️ 자동</button>
+          <button type="button" data-theme="light" title="라이트 모드" data-i18n="theme.light" data-i18n-title="theme.lightTitle">☀️ 라이트</button>
+          <button type="button" data-theme="dark" title="다크 모드" data-i18n="theme.dark" data-i18n-title="theme.darkTitle">🌙 다크</button>
+        </div>
+        <div class="lang-toggle" role="group" aria-label="언어" data-i18n-aria="lang.group">
+          <button type="button" data-lang="ko" lang="ko">한국어</button>
+          <button type="button" data-lang="en" lang="en">English</button>
         </div>
         <button id="pin" type="button"></button>
-        <span id="conn" class="conn off" title="세션 기록 연결 상태"></span>
+        <span id="conn" class="conn off" title="세션 기록 연결 상태" data-i18n-title="hud.conn"></span>
       </header>
       <div id="stage"></div>
       <div id="toast"></div>

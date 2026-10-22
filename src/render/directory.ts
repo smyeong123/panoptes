@@ -1,4 +1,5 @@
 import type { FloorInfo, SessionInfo } from '../../shared/events.ts';
+import { t } from '../i18n.ts';
 import { esc } from './iso.ts';
 
 const ORDER_KEY = 'rto.floorOrder';
@@ -23,10 +24,10 @@ function save(order: string[]) {
 
 export function ago(ms: number): string {
   const s = Math.max(0, Math.round(ms / 1000));
-  if (s < 60) return '방금';
-  if (s < 3600) return `${Math.floor(s / 60)}분 전`;
-  if (s < 86400) return `${Math.floor(s / 3600)}시간 전`;
-  return `${Math.floor(s / 86400)}일 전`;
+  if (s < 60) return t('ago.now');
+  if (s < 3600) return t('ago.min', { n: Math.floor(s / 60) });
+  if (s < 86400) return t('ago.hour', { n: Math.floor(s / 3600) });
+  return t('ago.day', { n: Math.floor(s / 86400) });
 }
 
 export function isActive(s: SessionInfo, now: number): boolean {
@@ -75,7 +76,7 @@ export class Directory {
   render(floors: FloorInfo[], current: { dir: string; id: string } | null, now: number) {
     const list = [...floors].sort((a, b) => this.nums.of(b.dir) - this.nums.of(a.dir));
     this.host.innerHTML = `
-      <div class="dir-head"><span class="dir-logo">🏢</span><div><b>FLOOR GUIDE</b><small>층별 안내</small></div></div>
+      <div class="dir-head"><span class="dir-logo">🏢</span><div><b>FLOOR GUIDE</b><small>${t('dir.subtitle')}</small></div></div>
       <ol class="floors">${list
         .map((f) => {
           const here = current?.dir === f.dir;

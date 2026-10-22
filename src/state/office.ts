@@ -1,4 +1,5 @@
 import type { OfficeEvent, Room } from '../../shared/events.ts';
+import { t } from '../i18n.ts';
 import { ELEVATOR, ELEVATOR_OUT, rounded, route, SPOTS, spotFor, type Pt } from '../layout.ts';
 
 export type Phase = 'arriving' | 'working' | 'reporting' | 'leaving' | 'gone';
@@ -49,6 +50,13 @@ export interface Agent {
   doneAt: number;
   reportAt: number;
   goneAt: number;
+}
+
+/** 서버가 비워 보낸 라벨(질문·계획 검토)은 화면 언어로 채운다 */
+function fallbackLabel(name: string): string {
+  if (name === 'AskUserQuestion') return t('ask.question');
+  if (name === 'ExitPlanMode') return t('ask.plan');
+  return '';
 }
 
 const SPEED = 4.6; // 타일/초, 일이 밀리면 뛴다
@@ -183,7 +191,7 @@ export class Office {
     } else if (a.phase === 'reporting' || a.phase === 'leaving') {
       a.phase = 'working';
       a.path = [];
-      this.say(a, 'say', '앗, 하나 더요!', now + 1800);
+      this.say(a, 'say', t('bubble.oneMore'), now + 1800);
     }
     a.doneAt = 0;
     a.reportAt = 0;
@@ -201,7 +209,7 @@ export class Office {
           kind: ev.name === 'Agent' || ev.name === 'Task' ? 'phone' : 'tool',
           toolId: ev.id,
           name: ev.name,
-          label: ev.label,
+          label: ev.label || fallbackLabel(ev.name),
           git: ev.git,
           done: false,
         });
@@ -215,7 +223,7 @@ export class Office {
         if (act) act.done = true;
         if (ev.error) {
           a.sweatUntil = now + 2800;
-          this.say(a, 'error', ev.errText || '앗, 실패…', now + 2800);
+          this.say(a, 'error', ev.errText || t('bubble.failed'), now + 2800);
         }
         if (this.spawnIds.has(ev.id) && !ev.async) this.finishSub(ev.id, now);
         break;
@@ -246,7 +254,7 @@ export class Office {
         } else {
           this.spawnSub(ev.toolUseId, ev.subagentType, ev.description, now);
         }
-        if (a) this.say(a, 'phone', `📞 ${ev.subagentType}님, ${ev.description || '부탁해요'}`, now + 2600);
+        if (a) this.say(a, 'phone', t('bubble.call', { type: ev.subagentType, desc: ev.description || t('bubble.callDefault') }), now + 2600);
         break;
       }
       case 'agentDone':
@@ -317,10 +325,10 @@ export class Office {
       if (a.phase === 'reporting' && !a.path.length) {
         if (!a.reportAt) {
           a.reportAt = now;
-          this.say(a, 'report', '📋 다 했어요, 보고드립니다!', now + 1800);
+          this.say(a, 'report', t('bubble.report'), now + 1800);
         } else if (now - a.reportAt > 1800) {
           a.phase = 'leaving';
-          this.say(a, 'bye', '👋 퇴근합니다!', now + 3200);
+          this.say(a, 'bye', t('bubble.bye'), now + 3200);
           this.goto(a, ELEVATOR);
         }
       }

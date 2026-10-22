@@ -103,6 +103,13 @@ describe('Office', () => {
     expect(o.main.bubble).toMatchObject({ kind: 'error', text: 'exit 1' });
   });
 
+  it('라벨 없이 온 계획 검토는 화면 언어 문구로 묻는다', () => {
+    const o = new Office();
+    o.apply(ev({ k: 'tool', agent: 'main', id: 'p', name: 'ExitPlanMode', room: 'user', label: '' }), 0);
+    o.snap(100);
+    expect(o.main.bubble).toMatchObject({ kind: 'ask', text: '❓ 계획 검토 부탁드려요' });
+  });
+
   it('재생 후 snap: 끝난 서브에이전트는 사라지고 메인은 마지막 방에 있다', () => {
     const o = new Office();
     o.apply(ev({ k: 'spawn', agent: 'main', toolUseId: SUB, subagentType: 'Explore', description: '' }), 0);

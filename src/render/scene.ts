@@ -1,6 +1,7 @@
 import type { Room } from '../../shared/events.ts';
 import type { Agent, Office } from '../state/office.ts';
-import { buildFloor, VIEWBOX } from './building.ts';
+import { t } from '../i18n.ts';
+import { buildFloor, roomLabels, VIEWBOX } from './building.ts';
 import { characterSvg, lookFor } from './character.ts';
 import { partsFor, pose3d } from './figure.ts';
 import { esc, iso, depthOf } from './iso.ts';
@@ -68,6 +69,12 @@ export class Scene {
     this.boardLines = this.svg.querySelector('#whiteboard-lines')!;
     this.elevInd = this.svg.querySelector('#elev-indicator')!;
     this.userBubble = this.svg.querySelector('.user-bubble')!;
+  }
+
+  /** 언어가 바뀌면 방 이름표와 명패를 다시 쓴다 */
+  relabel() {
+    this.svg.querySelector('.labels')!.innerHTML = roomLabels();
+    this.svg.querySelector('#user-nameplate')!.textContent = t('plate.user');
   }
 
   setFloorLabel(label: string) {

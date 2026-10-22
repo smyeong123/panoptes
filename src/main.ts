@@ -1,6 +1,7 @@
 import type { FloorInfo, ServerMessage } from '../shared/events.ts';
 import { ago, Directory, FloorNumbers, isActive } from './render/directory.ts';
 import { Scene } from './render/scene.ts';
+import { initLang, t } from './i18n.ts';
 import { Office } from './state/office.ts';
 import { initTheme } from './theme.ts';
 import './styles.css';
@@ -13,6 +14,11 @@ interface Current {
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 
 initTheme();
+// 방 이름표가 Scene을 만들 때 그려지므로 그 전에 언어를 정한다
+initLang(() => {
+  scene.relabel();
+  refreshDirectory();
+});
 
 const office = new Office();
 const scene = new Scene($('#stage'));
@@ -92,7 +98,7 @@ function follow() {
   const latest = f.sessions[0];
   if (!latest || latest.id === current.id || !isActive(latest, now)) return;
   if (cur && cur.mtime >= latest.mtime) return;
-  toast('🚪 새 세션이 열려서 따라갑니다');
+  toast(t('hud.followToast'));
   switchTo({ dir: f.dir, id: latest.id }, false);
 }
 
@@ -156,10 +162,10 @@ function hud() {
   const f = floorOf(current?.dir);
   const s = f?.sessions.find((x) => x.id === current?.id);
   if (!moving) $('#elevator-ind').textContent = current ? `${nums.of(current.dir)}F` : '—';
-  $('#floor-name').textContent = f?.name ?? '사무실을 찾는 중…';
+  $('#floor-name').textContent = f?.name ?? t('hud.searching');
   $('#store-name').textContent = s ? `${s.title || s.id.slice(0, 8)} · ${ago(Date.now() - s.mtime)}` : '';
   const btn = $<HTMLButtonElement>('#pin');
-  btn.textContent = pinned ? '📌 이 세션 고정' : '🔁 새 세션 따라가기';
+  btn.textContent = pinned ? t('hud.pinned') : t('hud.follow');
   btn.classList.toggle('pinned', pinned);
 }
 

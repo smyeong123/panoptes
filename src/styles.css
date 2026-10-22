@@ -447,7 +447,8 @@ main {
 }
 
 /* 테마 토글 */
-.theme-toggle {
+.theme-toggle,
+.lang-toggle {
   display: inline-flex;
   padding: 3px;
   gap: 2px;
@@ -455,7 +456,8 @@ main {
   background: var(--surface-2);
   border: 1px solid var(--line);
 }
-.theme-toggle button {
+.theme-toggle button,
+.lang-toggle button {
   border: 0;
   background: transparent;
   color: var(--muted);
@@ -465,7 +467,8 @@ main {
   border-radius: 999px;
   cursor: pointer;
 }
-.theme-toggle button[aria-pressed='true'] {
+.theme-toggle button[aria-pressed='true'],
+.lang-toggle button[aria-pressed='true'] {
   background: var(--surface);
   color: var(--ink);
   box-shadow: var(--shadow);

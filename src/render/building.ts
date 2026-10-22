@@ -1,3 +1,4 @@
+import { t } from '../i18n.ts';
 import { CORRIDOR_Y, doorOf, GRID, ROOMS, type RoomKey } from '../layout.ts';
 import { box, esc, iso, line, planeX, planeY, planeZ, quad, shade } from './iso.ts';
 
@@ -22,13 +23,13 @@ const FLOOR: Record<RoomKey, { fill: string; kind: 'wood' | 'carpet' | 'raised' 
   office: { fill: v('floor-wood'), kind: 'wood' },
 };
 
-const LABEL: Record<RoomKey, string> = {
-  library: '📚 자료실',
-  dev: '💻 개발실',
-  server: '🗄️ 서버실',
-  search: '🌐 정보검색실',
-  meeting: '🗒️ 회의실',
-  office: '🧑‍💻 오픈 오피스',
+const LABEL: Record<RoomKey, Parameters<typeof t>[0]> = {
+  library: 'room.library',
+  dev: 'room.dev',
+  server: 'room.server',
+  search: 'room.search',
+  meeting: 'room.meeting',
+  office: 'room.office',
 };
 
 function rng(seed: number) {
@@ -500,7 +501,7 @@ function office(): Item[] {
   u += monitor(18.25, 8.5, 18, 34, 18, `<text x="3" y="6.5" class="term-glyph">&gt;_ claude</text><rect class="term-cursor" x="3" y="9.5" width="4" height="2" fill="#7ee787"/>`);
   const mug = iso(19.4, 8.9, 18);
   u += `<g transform="translate(${mug.sx},${mug.sy})"><rect x="-3" y="-7" width="6" height="7" rx="1" style="fill:${v('mug')}"/><path d="M3,-5 q3,0 3,2 q0,2 -3,2" fill="none" style="stroke:${v('mug')}"/></g>`;
-  u += `<g transform="${planeX(18.1, 9.1, 10)}"><rect width="26" height="7" rx="1.5" style="fill:${v('plate')};stroke:#4a90d9;stroke-width:.6"/><text x="13" y="5.4" class="nameplate">내 자리</text></g>`;
+  u += `<g transform="${planeX(18.1, 9.1, 10)}"><rect width="26" height="7" rx="1.5" style="fill:${v('plate')};stroke:#4a90d9;stroke-width:.6"/><text x="13" y="5.4" class="nameplate" id="user-nameplate">${t('plate.user')}</text></g>`;
   out.push(item(18.0, 8.2, 1.7, 0.9, u));
   out.push(item(18.15, 9.3, 0.5, 0.5, chair(18.15, 9.3, v('chair-mine'), false)));
   // 라운지: 소파 + 커피 테이블
@@ -511,14 +512,15 @@ function office(): Item[] {
   return out;
 }
 
-function roomLabels(): string {
+export function roomLabels(): string {
   let s = '';
   for (const k of Object.keys(ROOMS) as RoomKey[]) {
     const r = ROOMS[k];
-    const wU = [...LABEL[k]].length * 6.2 + 8;
+    const label = t(LABEL[k]);
+    const wU = [...label].length * 6.2 + 8;
     s += `<g class="room-label" transform="${planeX(r.x + 0.3, r.y + r.d + 0.05, GLASS_H - 8)}">
       <rect x="0" y="-9" width="${wU.toFixed(1)}" height="11" rx="5.5" class="room-sign"/>
-      <text x="5" y="-1.2" class="room-label-text">${esc(LABEL[k])}</text></g>`;
+      <text x="5" y="-1.2" class="room-label-text">${esc(label)}</text></g>`;
   }
   return s;
 }
