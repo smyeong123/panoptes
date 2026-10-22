@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- 사무실 한 층(아이소메트릭 블록). 왼쪽 면의 불 켜진 창이 눈: 지켜보는 사무실 -->
+  <g stroke-linejoin="round" stroke-width="2">
+    <path d="M32 3 59 16.5 32 30 5 16.5Z" fill="#5b6680" stroke="#5b6680"/>
+    <path d="M5 16.5 32 30v31L5 47.5Z" fill="#3a4357" stroke="#3a4357"/>
+    <path d="M32 30 59 16.5v31L32 61Z" fill="#272d3a" stroke="#272d3a"/>
+  </g>
+  <g transform="matrix(1 -.5 0 1 32 30)" fill="#3a4357">
+    <rect x="5" y="7" width="6" height="5" rx="1"/>
+    <rect x="15" y="7" width="6" height="5" rx="1"/>
+    <rect x="5" y="17" width="6" height="5" rx="1"/>
+    <rect x="15" y="17" width="6" height="5" rx="1"/>
+  </g>
+  <g transform="matrix(1 .5 0 1 5 16.5)">
+    <path d="M.5 15.5Q13.5-5 26.5 15.5 13.5 36 .5 15.5Z" fill="#ffcf85"/>
+    <circle cx="13.5" cy="15.5" r="6.8" fill="#1f2533"/>
+    <circle cx="16.2" cy="12.8" r="2" fill="#ffcf85"/>
+  </g>
+</svg>
