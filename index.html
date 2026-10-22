@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Panoptes</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏢</text></svg>" />
+    <script>
+      // 첫 페인트 전에 테마를 정해서 깜빡임을 막는다 (src/theme.ts와 같은 규칙)
+      (function () {
+        var pref = 'auto';
+        try {
+          pref = localStorage.getItem('rto.theme') || 'auto';
+        } catch (e) {}
+        var dark = pref === 'dark' || (pref !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      })();
+    </script>
+  </head>
+  <body>
+    <aside id="directory"></aside>
+    <main>
+      <header class="hud">
+        <div class="elevator-panel"><span id="elevator-ind">—</span></div>
+        <div class="where">
+          <div id="floor-name">사무실을 찾는 중…</div>
+          <div id="store-name"></div>
+        </div>
+        <div class="theme-toggle" role="group" aria-label="테마">
+          <button type="button" data-theme="auto" title="시스템 설정 따라가기">🖥️ 자동</button>
+          <button type="button" data-theme="light" title="라이트 모드">☀️ 라이트</button>
+          <button type="button" data-theme="dark" title="다크 모드">🌙 다크</button>
+        </div>
+        <button id="pin" type="button"></button>
+        <span id="conn" class="conn off" title="세션 기록 연결 상태"></span>
+      </header>
+      <div id="stage"></div>
+      <div id="toast"></div>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

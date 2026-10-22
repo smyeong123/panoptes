@@ -1,0 +1,21 @@
+{
+  "name": "panoptes",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Claude Code 세션 기록을 따라 움직이는 아이소메트릭 사무실",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "start": "tsx server/index.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.3",
+    "vitest": "^2.1.8"
+  }
+}
