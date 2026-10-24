@@ -322,6 +322,10 @@ body {
 .floor-git.dirty {
   color: var(--accent);
 }
+.warn {
+  margin-right: 4px;
+  color: #d92d20;
+}
 .count {
   font-size: 11px;
   color: var(--muted);
@@ -687,6 +691,14 @@ svg.office ellipse {
 }
 .dev-busy .code-lines {
   animation-play-state: running;
+}
+.dev-collide .code-screen .screen-glow {
+  animation: collide 0.9s ease-in-out infinite;
+}
+@keyframes collide {
+  50% {
+    fill: #b42318;
+  }
 }
 @keyframes code {
   to {

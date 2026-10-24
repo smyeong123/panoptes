@@ -179,6 +179,14 @@ export class Office {
     return a;
   }
 
+  /** 같은 파일을 다른 쪽도 고치고 있으면 해당 캐릭터가 빨간 말풍선을 띄운다 */
+  flagCollision(keys: string[], text: string, now: number) {
+    for (const k of keys) {
+      const a = this.agents.get(this.aliases.get(k) ?? k);
+      if (a && a.phase !== 'gone') this.say(a, 'error', text, now + 4000);
+    }
+  }
+
   private say(a: Agent, kind: BubbleKind, text: string, until: number) {
     a.bubble = { kind, text, until };
   }

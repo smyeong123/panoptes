@@ -1,7 +1,9 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import path from 'node:path';
 import type { Plugin } from 'vite';
-import type { OfficeEvent, ServerMessage } from '../shared/events.ts';
-import { FloorScanner, SessionTail } from './watcher.ts';
+import type { Collision, OfficeEvent, ServerMessage } from '../shared/events.ts';
+import { CollisionTracker } from './collisions.ts';
+import { FloorScanner, PROJECTS_DIR, SessionTail } from './watcher.ts';
 
 interface Client {
   res: ServerResponse;
@@ -13,13 +15,27 @@ export class OfficeHub {
   private clients = new Set<Client>();
   private tails = new Map<string, SessionTail>();
   private scanner = new FloorScanner((floors) => this.broadcast({ t: 'floors', floors }));
+  private tracker = new CollisionTracker((dir, id) => path.join(PROJECTS_DIR, dir, `${id}.jsonl`));
+  private collisions: Collision[] = [];
+  private collisionsJson = '[]';
 
   start() {
     this.scanner.start();
+    // 창에서 벗어난 충돌도 사라져야 하므로 파일 변화와 상관없이 매초 다시 계산한다
+    setInterval(() => this.checkCollisions(), 1000).unref();
     // 프록시가 연결을 끊지 않게 주기적으로 주석을 흘린다
     setInterval(() => {
       for (const c of this.clients) c.res.write(': ping\n\n');
     }, 15000).unref();
+  }
+
+  private checkCollisions() {
+    const list = this.tracker.update(this.scanner.floors);
+    const json = JSON.stringify(list);
+    if (json === this.collisionsJson) return;
+    this.collisionsJson = json;
+    this.collisions = list;
+    this.broadcast({ t: 'collisions', list });
   }
 
   private send(c: Client, msg: ServerMessage) {
@@ -47,6 +63,7 @@ export class OfficeHub {
     const client: Client = { res, session };
     this.clients.add(client);
     this.send(client, { t: 'floors', floors: this.scanner.floors });
+    this.send(client, { t: 'collisions', list: this.collisions });
 
     if (session) {
       const live = this.tails.get(session);

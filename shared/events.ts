@@ -45,7 +45,14 @@ export interface FloorInfo {
   git?: GitInfo;
 }
 
+/** 창 안에서 같은 파일을 고친 편집자들. agent는 'main' 또는 서브에이전트 키. */
+export interface Collision {
+  path: string;
+  editors: { dir: string; id: string; agent: string; ts: number }[];
+}
+
 export type ServerMessage =
   | { t: 'floors'; floors: FloorInfo[] }
+  | { t: 'collisions'; list: Collision[] }
   | { t: 'replay'; session: string; events: OfficeEvent[] }
   | { t: 'events'; session: string; events: OfficeEvent[] };
