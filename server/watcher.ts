@@ -122,7 +122,13 @@ interface CodexSession {
   title: string;
   mtime: number;
   size: number;
+  start: number;
+  originator: string;
 }
+
+// Claude가 codex exec를 부른 뒤 Codex 기록이 시작될 때까지 기다려 주는 시간(권한 확인 포함)
+const LINK_BEFORE_MS = 5000;
+const LINK_AFTER_MS = 10 * 60_000;
 
 const CODEX_DAY_DIRS = 7;
 
@@ -130,9 +136,42 @@ const CODEX_DAY_DIRS = 7;
 class CodexIndex {
   private byFile = new Map<string, CodexSession>();
   private byId = new Map<string, CodexSession>();
+  // Claude 호출(tool_use id) ↔ 그 호출로 시작된 Codex 세션. 서버가 떠 있는 동안 유지한다.
+  private links = new Map<string, string>();
+  private linked = new Set<string>();
+  // 층 스캐너가 Claude 기록에서 찾은, 아직 짝이 없는 codex 호출
+  private pending = new Map<string, { ts: number; cwd: string }>();
+
+  /** Claude 기록에서 찾은 codex 호출을 올려 둔다. 다음 scan()에서 짝을 찾는다. */
+  addHandoff(toolUseId: string, ts: number, cwd: string) {
+    if (!this.links.has(toolUseId)) this.pending.set(toolUseId, { ts, cwd });
+  }
 
   get(id: string): CodexSession | undefined {
     return this.byId.get(id);
+  }
+
+  isLinked(codexId: string): boolean {
+    return this.linked.has(codexId);
+  }
+
+  /**
+   * Claude의 codex 호출(toolUseId, ts, cwd)에 맞는 Codex 세션을 찾아 묶는다.
+   * 호출 직후에 시작했고 아직 다른 호출에 묶이지 않은 세션 중 가장 이른 것. 같은 폴더를 먼저 고른다.
+   * 사용자가 직접 연 대화형 세션(codex-tui)은 고르지 않는다.
+   */
+  link(toolUseId: string, ts: number, cwd: string): CodexSession | undefined {
+    const known = this.links.get(toolUseId);
+    if (known) return this.byId.get(known);
+    const candidates = [...this.byId.values()]
+      .filter((s) => !this.linked.has(s.id) && s.originator !== 'codex-tui')
+      .filter((s) => s.start >= ts - LINK_BEFORE_MS && s.start <= ts + LINK_AFTER_MS)
+      .sort((a, b) => Number(b.cwd === cwd) - Number(a.cwd === cwd) || a.start - b.start);
+    const hit = candidates[0];
+    if (!hit) return undefined;
+    this.links.set(toolUseId, hit.id);
+    this.linked.add(hit.id);
+    return hit;
   }
 
   /** 최근 며칠치 날짜 폴더만 본다. 오래 열린 세션도 시작한 날짜 폴더에 계속 쓰므로 하루치로는 모자라다. */
@@ -161,6 +200,8 @@ class CodexIndex {
     if (cached && cached.mtime === st.mtimeMs) return cached;
     let id = cached?.id ?? '';
     let cwd = cached?.cwd ?? '';
+    let start = cached?.start ?? 0;
+    let originator = cached?.originator ?? '';
     if (!cwd) {
       const top = readSlice(file, 0, Math.min(st.size, 64 * 1024)).toString('utf8');
       const nl = top.indexOf('\n');
@@ -169,6 +210,8 @@ class CodexIndex {
         if (meta?.type === 'session_meta') {
           id = String(meta.payload?.id ?? '');
           cwd = String(meta.payload?.cwd ?? '');
+          start = Date.parse(meta.payload?.timestamp ?? meta.timestamp) || 0;
+          originator = String(meta.payload?.originator ?? '');
         }
       } catch {
         // 첫 줄이 아직 덜 써졌을 수 있음
@@ -187,7 +230,7 @@ class CodexIndex {
         break;
       }
     }
-    const s = { id, file, cwd, title, mtime: st.mtimeMs, size: st.size };
+    const s = { id, file, cwd, title, mtime: st.mtimeMs, size: st.size, start: start || st.birthtimeMs, originator };
     this.byFile.set(file, s);
     return s;
   }
@@ -214,6 +257,10 @@ class CodexIndex {
     }
     for (const f of this.byFile.keys()) if (!seen.has(f)) this.byFile.delete(f);
     this.byId = new Map(out.map((s) => [s.id, s]));
+    // 누가 그 Claude 세션을 보고 있지 않아도 묶어 둬야 Codex 매장이 따로 튀어나오지 않는다
+    for (const [toolUseId, h] of [...this.pending].sort((a, b) => a[1].ts - b[1].ts)) {
+      if (this.link(toolUseId, h.ts, h.cwd) || now - h.ts > LINK_AFTER_MS) this.pending.delete(toolUseId);
+    }
     return out;
   }
 }
@@ -260,12 +307,20 @@ export class FloorScanner {
     }
     const h = { mtime: st.mtimeMs, title: redact(unescapeJson(title)), cwd: unescapeJson(cwd) };
     this.heads.set(file, h);
+    if (tail.includes('codex')) {
+      for (const l of tail.split('\n')) {
+        if (!l.includes('codex') || !l.includes('"tool_use"')) continue;
+        for (const e of parseLine(l)) if (e.k === 'spawn' && e.subagentType === 'Codex') codexIndex.addHandoff(e.toolUseId, e.ts, h.cwd);
+      }
+    }
     return h;
   }
 
   /** Codex 세션을 같은 작업 폴더의 층에 얹는다. 그런 층이 없으면 새 층을 만든다. */
   private mergeCodex(floors: FloorInfo[], now: number) {
     for (const cx of codexIndex.scan(now)) {
+      // Claude의 서브에이전트로 묶인 세션은 그 Claude 매장 안에 보이므로 따로 내놓지 않는다
+      if (codexIndex.isLinked(cx.id)) continue;
       const dir = encodeCwd(cx.cwd);
       let f = floors.find((x) => x.dir === dir);
       if (!f) {
@@ -345,6 +400,10 @@ export class SessionTail {
   readonly subDir: string;
   readonly source: SessionSource;
   private parse: (line: string, agent: string) => OfficeEvent[];
+  // Claude가 codex exec로 맡긴 일: 아직 기록을 못 찾은 호출(toolUseId → ts)과 찾은 기록(파일 → toolUseId)
+  private handoffs = new Map<string, number>();
+  private codexFiles = new Map<string, string>();
+  private cwd = '';
 
   constructor(
     readonly key: string,
@@ -364,20 +423,49 @@ export class SessionTail {
     return parts.length === 2 && parts.every((p) => p && !p.includes('..') && !/[\\:]/.test(p));
   }
 
+  /** 줄 하나를 이벤트로. 어느 파서를 쓸지 고르고, cwd와 Codex 호출을 기억해 둔다. */
+  private parseFrom(file: string, line: string, agent: string): OfficeEvent[] {
+    if (this.codexFiles.has(file)) return parseCodexLine(line, agent);
+    if (!this.cwd && this.source === 'claude' && line.includes('"cwd"')) {
+      try {
+        this.cwd = String(JSON.parse(line).cwd ?? '');
+      } catch {
+        // 다음 줄에서 다시
+      }
+    }
+    const events = this.parse(line, agent);
+    for (const e of events) if (e.k === 'spawn' && e.subagentType === 'Codex') this.handoffs.set(e.toolUseId, e.ts);
+    return events;
+  }
+
+  /** 아직 못 찾은 Codex 호출의 기록을 찾아 붙인다 */
+  private linkCodex() {
+    for (const [toolUseId, ts] of this.handoffs) {
+      const cx = codexIndex.link(toolUseId, ts, this.cwd);
+      if (!cx) continue;
+      this.codexFiles.set(cx.file, toolUseId);
+      this.handoffs.delete(toolUseId);
+    }
+  }
+
   /** 지금까지의 기록을 이벤트로 돌려주고, 이후 증가분을 따라가기 시작한다. */
   replay(): OfficeEvent[] {
     const events: OfficeEvent[] = [];
-    for (const [file, agent] of this.discover(true)) {
+    const read = (file: string, agent: string) => {
       const st = statOrNull(file);
-      if (!st) continue;
+      if (!st) return;
       const start = Math.max(0, st.size - REPLAY_BYTES);
       const buf = readSlice(file, start, st.size);
       const cut = buf.lastIndexOf(0x0a);
       const lines = cut < 0 ? [] : buf.subarray(0, cut).toString('utf8').split('\n');
       if (start > 0) lines.shift();
-      for (const l of lines) if (l.trim()) events.push(...this.parse(l, agent));
+      for (const l of lines) if (l.trim()) events.push(...this.parseFrom(file, l, agent));
       this.files.set(file, { offset: st.size, rest: Buffer.from(buf.subarray(cut + 1)), agent });
-    }
+    };
+    for (const [file, agent] of this.discover(true)) read(file, agent);
+    // Codex 호출은 본 기록을 읽어야 알 수 있으므로 한 번 더
+    this.linkCodex();
+    for (const [file, agent] of this.codexFiles) if (!this.files.has(file)) read(file, agent);
     events.sort((a, b) => a.ts - b.ts);
     return events.slice(-REPLAY_MAX_EVENTS);
   }
@@ -393,6 +481,10 @@ export class SessionTail {
   /** [파일, 에이전트 키] 목록. 서브에이전트 키는 meta.json의 toolUseId. */
   private discover(initial: boolean): [string, string][] {
     const out: [string, string][] = [[this.mainFile, 'main']];
+    if (!initial) {
+      this.linkCodex();
+      out.push(...this.codexFiles);
+    }
     if (!this.subDir) return out;
     let names: string[] = [];
     try {
@@ -451,7 +543,7 @@ export class SessionTail {
       }
       f.rest = chunk.subarray(cut + 1);
       for (const l of chunk.subarray(0, cut).toString('utf8').split('\n')) {
-        if (l.trim()) events.push(...this.parse(l, f.agent));
+        if (l.trim()) events.push(...this.parseFrom(file, l, f.agent));
       }
     }
     if (events.length) {

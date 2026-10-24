@@ -21,7 +21,7 @@ npm run build && npm start   # http://127.0.0.1:4317
 
 Set `CLAUDE_PROJECTS_DIR` to change which folder is read, and `PORT`/`HOST` to change the address of the standalone server. The server only listens on 127.0.0.1 and sends the page summaries only, such as file names or the start of a command. Common secret shapes (API keys, GitHub/Slack tokens, JWTs, `Bearer …`, `PASSWORD=…`) are masked before anything reaches the page.
 
-Codex CLI sessions (`~/.codex/sessions`, or `CODEX_HOME`) show up too: a Codex session lands on the same floor as Claude sessions for that folder, marked with a Codex chip, and its character wears black with a headset.
+Codex CLI sessions (`~/.codex/sessions`, or `CODEX_HOME`) show up too: a Codex session lands on the same floor as Claude sessions for that folder, marked with a Codex chip, and its character wears black with a headset. When Claude hands work to Codex (`codex exec "…"` via Bash, or a `mcp__codex__*` tool), Claude makes a phone call and Codex arrives by elevator as Claude's subagent instead of opening a separate store, then reports back and leaves when the command returns.
 
 Switch the theme with 🖥️ Auto / ☀️ Light / 🌙 Dark at the top. Auto follows your system setting. Light is the office by day; dark is the office at night (city lights, glowing screens, floor lamps). All colors live as CSS variables in `src/styles.css`.
 

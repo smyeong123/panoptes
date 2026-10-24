@@ -27,6 +27,25 @@ describe('parseLine', () => {
     expect((ev as { label: string }).label).not.toContain('sk-ant');
   });
 
+  it('codex exec를 부르면 전화하고 Codex 서브에이전트를 부른다', () => {
+    const evs = parseLine(
+      asst([{ type: 'tool_use', id: 'tc', name: 'Bash', input: { command: 'codex exec --full-auto "list server files"', description: 'Ask Codex' } }]),
+    );
+    expect(evs.map((e) => e.k)).toEqual(['tool', 'spawn']);
+    expect(evs[0]).toMatchObject({ room: 'desk', call: true });
+    expect(evs[1]).toMatchObject({ toolUseId: 'tc', subagentType: 'Codex', description: 'list server files' });
+    const mcp = parseLine(asst([{ type: 'tool_use', id: 'tm', name: 'mcp__codex__codex', input: { prompt: 'review' } }]));
+    expect(mcp[1]).toMatchObject({ k: 'spawn', subagentType: 'Codex', description: 'review' });
+    expect(parseLine(asst([{ type: 'tool_use', id: 'tx', name: 'Bash', input: { command: 'echo codex' } }]))).toHaveLength(1);
+  });
+
+  it('백그라운드 Bash 결과는 async', () => {
+    const [ev] = parseLine(
+      user([{ type: 'tool_result', tool_use_id: 'tc', content: 'started' }], { toolUseResult: { backgroundTaskId: 'b1' } }),
+    );
+    expect(ev).toMatchObject({ k: 'toolDone', id: 'tc', async: true });
+  });
+
   it('mcp 도구는 정보검색실', () => {
     const [ev] = parseLine(asst([{ type: 'tool_use', id: 't3', name: 'mcp__chrome-devtools__click', input: {} }]));
     expect(ev).toMatchObject({ room: 'search', label: 'chrome-devtools · click' });

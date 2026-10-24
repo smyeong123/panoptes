@@ -69,6 +69,20 @@ function boardLines(name: string, input: any): string[] | undefined {
   return undefined;
 }
 
+const CODEX_EXEC_RE = /(^|[\s;&|(])codex\s+(?:exec|e)(\s|$)/;
+
+/** Claude가 Codex에게 일을 맡기는 호출: Bash로 codex exec, 또는 Codex MCP 도구 */
+export function codexHandoff(name: string, input: any): string | null {
+  if (name.startsWith('mcp__codex')) return clip(input?.prompt ?? '', 40);
+  if (name !== 'Bash' && name !== 'PowerShell') return null;
+  const cmd = String(input?.command ?? '');
+  if (!CODEX_EXEC_RE.test(cmd)) return null;
+  // codex exec [옵션…] "할 일" 에서 할 일만: 따옴표 친 첫 문자열, 없으면 옵션 뒤 나머지
+  const rest = cmd.replace(/^[\s\S]*?codex\s+(?:exec|e)\s+/, '');
+  const quoted = /(["'])([\s\S]*?)\1/.exec(rest);
+  return clip(quoted ? quoted[2] : rest.replace(/^(?:-{1,2}[\w-]+\s+)*/, ''), 40);
+}
+
 export function isGit(name: string, input: any): boolean {
   return (name === 'Bash' || name === 'PowerShell') && /(^|[\s;&|(])git\s/.test(String(input?.command ?? ''));
 }
@@ -141,6 +155,7 @@ export function parseLine(line: string, agent = 'main'): OfficeEvent[] {
         usedTool = true;
         const name = String(c.name);
         const input = c.input ?? {};
+        const handoff = codexHandoff(name, input);
         out.push({
           k: 'tool',
           ts,
@@ -151,7 +166,11 @@ export function parseLine(line: string, agent = 'main'): OfficeEvent[] {
           label: summarize(name, input),
           git: isGit(name, input) || undefined,
           board: boardLines(name, input),
+          ...(handoff !== null ? { room: 'desk' as const, call: true } : {}),
         });
+        if (handoff !== null) {
+          out.push({ k: 'spawn', ts, agent, toolUseId: String(c.id), subagentType: 'Codex', description: handoff });
+        }
         if (name === 'Agent' || name === 'Task') {
           out.push({
             k: 'spawn',
@@ -184,7 +203,8 @@ export function parseLine(line: string, agent = 'main'): OfficeEvent[] {
     const tur = o.toolUseResult;
     const teammate = !!tur && typeof tur === 'object' && tur.status === 'teammate_spawned';
     const async =
-      teammate || (!!tur && typeof tur === 'object' && (tur.isAsync === true || tur.status === 'async_launched'));
+      teammate ||
+      (!!tur && typeof tur === 'object' && (tur.isAsync === true || tur.status === 'async_launched' || !!tur.backgroundTaskId));
     for (const c of content) {
       if (c?.type === 'tool_result') {
         if (teammate && (tur.agentId || tur.agent_id)) {
