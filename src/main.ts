@@ -1,4 +1,4 @@
-import type { FloorInfo, ServerMessage } from '../shared/events.ts';
+import type { Collision, FloorInfo, ServerMessage } from '../shared/events.ts';
 import { ago, Directory, FloorNumbers, gitSummary, isActive } from './render/directory.ts';
 import { Scene } from './render/scene.ts';
 import { initLang, t } from './i18n.ts';
@@ -28,6 +28,9 @@ let current: Current | null = null;
 let pinned = false;
 let es: EventSource | null = null;
 let moving = false;
+let collisions: Collision[] = [];
+// 이미 알린 충돌(세션|경로). 충돌이 풀렸다가 다시 생기면 또 알린다.
+const announced = new Set<string>();
 
 const directory = new Directory($('#directory'), nums, {
   onFloor: (dir) => {
@@ -76,12 +79,20 @@ function onMessage(msg: ServerMessage) {
     refreshDirectory();
     return;
   }
+  if (msg.t === 'collisions') {
+    collisions = msg.list;
+    checkCollisions();
+    refreshDirectory();
+    return;
+  }
   if (msg.session !== key(current)) return;
   if (msg.t === 'replay') {
     office.reset();
     scene.clearCharacters();
     for (const ev of msg.events) office.apply(ev, ev.ts);
     office.snap(Date.now());
+    // 재생이 사무실을 비우므로 이미 알고 있는 충돌 말풍선을 다시 띄운다
+    for (const c of collisions) if (mine(c).length) flag(c);
     return;
   }
   const now = Date.now();
@@ -100,6 +111,43 @@ function follow() {
   if (cur && cur.mtime >= latest.mtime) return;
   toast(t('hud.followToast'));
   switchTo({ dir: f.dir, id: latest.id }, false);
+}
+
+function mine(c: Collision) {
+  return c.editors.filter((e) => e.dir === current?.dir && e.id === current?.id);
+}
+
+/** 다른 쪽 편집자를 '층 이름 · 세션 제목'으로 */
+function describeEditor(e: Collision['editors'][number]): string {
+  const f = floorOf(e.dir);
+  const s = f?.sessions.find((x) => x.id === e.id);
+  return [f?.name ?? e.dir, s?.title || e.id.slice(0, 8)].join(' · ');
+}
+
+function checkCollisions() {
+  const k = key(current);
+  const live = collisions.filter((c) => mine(c).length);
+  scene.setCollide(live.length > 0);
+  const now = new Set(live.map((c) => `${k}|${c.path}`));
+  for (const sig of announced) if (!now.has(sig)) announced.delete(sig);
+  for (const c of live) {
+    const sig = `${k}|${c.path}`;
+    if (announced.has(sig)) continue;
+    announced.add(sig);
+    const file = c.path.split(/[\\/]/).pop() ?? c.path;
+    const other = c.editors.find((e) => e.dir !== current?.dir || e.id !== current?.id);
+    toast(t('hud.collision', { file, other: other ? describeEditor(other) : t('hud.collisionSubs') }));
+    flag(c);
+  }
+}
+
+function flag(c: Collision) {
+  const file = c.path.split(/[\\/]/).pop() ?? c.path;
+  office.flagCollision(
+    mine(c).map((e) => e.agent),
+    t('bubble.collision', { file }),
+    Date.now(),
+  );
 }
 
 const LAST_KEY = 'rto.lastFloor';
@@ -122,6 +170,7 @@ function switchTo(next: Current, pin: boolean) {
   pinned = pin;
   scene.setFloorLabel(`${nums.of(next.dir)}F`);
   connect(next);
+  checkCollisions();
   hud();
   refreshDirectory();
 }
@@ -171,7 +220,7 @@ function hud() {
 }
 
 function refreshDirectory() {
-  directory.render(floors, current, Date.now());
+  directory.render(floors, current, Date.now(), collisions);
   hud();
 }
 

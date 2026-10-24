@@ -1,4 +1,4 @@
-import type { FloorInfo, GitInfo, SessionInfo } from '../../shared/events.ts';
+import type { Collision, FloorInfo, GitInfo, SessionInfo } from '../../shared/events.ts';
 import { t } from '../i18n.ts';
 import { esc } from './iso.ts';
 
@@ -88,7 +88,10 @@ export class Directory {
     });
   }
 
-  render(floors: FloorInfo[], current: { dir: string; id: string } | null, now: number) {
+  render(floors: FloorInfo[], current: { dir: string; id: string } | null, now: number, collisions: Collision[] = []) {
+    const hotStores = new Set(collisions.flatMap((c) => c.editors.map((e) => `${e.dir}/${e.id}`)));
+    const hotFloors = new Set(collisions.flatMap((c) => c.editors.map((e) => e.dir)));
+    const warn = `<span class="warn" title="${esc(t('dir.collision'))}">⚠</span>`;
     const list = [...floors].sort((a, b) => this.nums.of(b.dir) - this.nums.of(a.dir));
     this.host.innerHTML = `
       <div class="dir-head"><span class="dir-logo">🏢</span><div><b>FLOOR GUIDE</b><small>${t('dir.subtitle')}</small></div></div>
@@ -100,12 +103,12 @@ export class Directory {
             ? `<ul class="stores">${f.sessions
                 .map(
                   (s) => `<li data-dir="${esc(f.dir)}" data-store="${esc(s.id)}" class="store${current?.id === s.id ? ' current' : ''}${isActive(s, now) ? ' live' : ''}">
-                    <span class="store-dot"></span><span class="store-name">${esc(s.title || s.id.slice(0, 8))}</span><span class="store-ago">${ago(now - s.mtime)}</span></li>`,
+                    <span class="store-dot"></span><span class="store-name">${hotStores.has(`${f.dir}/${s.id}`) ? warn : ''}${esc(s.title || s.id.slice(0, 8))}</span><span class="store-ago">${ago(now - s.mtime)}</span></li>`,
                 )
                 .join('')}</ul>`
             : '';
           return `<li class="floor${here ? ' here' : ''}${live ? ' live' : ''}" data-floor="${esc(f.dir)}" title="${esc(f.cwd || f.dir)}">
-            <div class="floor-row"><span class="fl">${this.nums.of(f.dir)}F</span><span class="floor-name">${esc(f.name)}</span>
+            <div class="floor-row"><span class="fl">${this.nums.of(f.dir)}F</span><span class="floor-name">${hotFloors.has(f.dir) ? warn : ''}${esc(f.name)}</span>
             <span class="lamp"></span><span class="count">${f.sessions.length}</span></div>${gitLine(f.git)}${stores}</li>`;
         })
         .join('')}</ol>`;

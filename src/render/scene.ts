@@ -48,6 +48,7 @@ export class Scene {
   private views = new Map<string, CharView>();
   private boardKey = '';
   private floorLabel = '1F';
+  private collide = false;
 
   constructor(host: HTMLElement) {
     const b = buildFloor();
@@ -75,6 +76,11 @@ export class Scene {
   relabel() {
     this.svg.querySelector('.labels')!.innerHTML = roomLabels();
     this.svg.querySelector('#user-nameplate')!.textContent = t('plate.user');
+  }
+
+  /** 지금 세션이 다른 쪽과 같은 파일을 고치는 중이면 개발실 화면이 빨갛게 깜빡인다 */
+  setCollide(on: boolean) {
+    this.collide = on;
   }
 
   setFloorLabel(label: string) {
@@ -229,6 +235,7 @@ export class Scene {
 
     const cl = this.svg.classList;
     cl.toggle('dev-busy', office.busy('dev'));
+    cl.toggle('dev-collide', this.collide);
     cl.toggle('server-busy', office.busy('server'));
     cl.toggle('git-busy', office.gitBusy());
     cl.toggle('search-busy', office.busy('search'));
