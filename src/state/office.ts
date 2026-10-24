@@ -90,6 +90,9 @@ export class Office {
   elevatorOpenUntil = 0;
   elevatorMoving = 0;
   private spawnIds = new Set<string>();
+  // 팀메이트 기록 파일 키(agent:<agentId>) → spawn id, 팀메이트 이름 → spawn id
+  private aliases = new Map<string, string>();
+  private teammates = new Map<string, string>();
   private nextSlot = 1;
   private lastDepart = 0;
 
@@ -100,6 +103,8 @@ export class Office {
   reset() {
     this.agents.clear();
     this.spawnIds.clear();
+    this.aliases.clear();
+    this.teammates.clear();
     this.board = [];
     this.userBubble = null;
     this.nextSlot = 1;
@@ -198,7 +203,12 @@ export class Office {
   }
 
   apply(ev: OfficeEvent, now: number) {
-    const a = ev.k === 'agentDone' ? this.agents.get(ev.toolUseId) : this.agentFor(ev.agent, now);
+    const a =
+      ev.k === 'agentDone'
+        ? this.agents.get(ev.toolUseId)
+        : ev.k === 'teammateIdle'
+          ? this.agents.get(this.teammates.get(ev.name) ?? '')
+          : this.agentFor(this.aliases.get(ev.agent) ?? ev.agent, now);
     if (a) a.lastEventAt = now;
     switch (ev.k) {
       case 'tool': {
@@ -260,6 +270,29 @@ export class Office {
       case 'agentDone':
         this.finishSub(ev.toolUseId, now);
         break;
+      case 'teammate': {
+        const fileKey = `agent:${ev.agentId}`;
+        this.aliases.set(fileKey, ev.toolUseId);
+        if (ev.name) this.teammates.set(ev.name, ev.toolUseId);
+        // 팀메이트가 spawn 결과보다 먼저 일을 시작했으면 그 사람이 진짜다. spawn 쪽 자리에 앉힌다
+        const early = this.agents.get(fileKey);
+        if (early) {
+          const spawned = this.agents.get(ev.toolUseId);
+          this.agents.delete(fileKey);
+          early.key = ev.toolUseId;
+          if (spawned) {
+            early.type = spawned.type;
+            early.description = spawned.description;
+          }
+          this.agents.set(ev.toolUseId, early);
+        }
+        break;
+      }
+      case 'teammateIdle': {
+        const key = this.teammates.get(ev.name);
+        if (key) this.finishSub(key, now);
+        break;
+      }
     }
   }
 

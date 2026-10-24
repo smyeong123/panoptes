@@ -16,7 +16,10 @@ export type OfficeEvent =
   | (Base & { k: 'prompt'; text: string })
   | (Base & { k: 'turnEnd' })
   | (Base & { k: 'spawn'; toolUseId: string; subagentType: string; description: string })
-  | (Base & { k: 'agentDone'; toolUseId: string });
+  | (Base & { k: 'agentDone'; toolUseId: string })
+  // 팀메이트로 뜬 서브에이전트: 기록 파일 키(agent:<agentId>)와 이름을 spawn id에 잇는다
+  | (Base & { k: 'teammate'; toolUseId: string; agentId: string; name: string })
+  | (Base & { k: 'teammateIdle'; name: string });
 
 export interface SessionInfo {
   id: string;

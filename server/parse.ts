@@ -85,6 +85,24 @@ function notification(text: string, ts: number): OfficeEvent[] {
   return [{ k: 'agentDone', ts, agent: 'main', toolUseId: m[1].trim() }];
 }
 
+const TEAMMATE_RE = /<teammate-message teammate_id="([^"]+)"[^>]*>\s*(\{[\s\S]*?\})\s*<\/teammate-message>/g;
+
+// 팀메이트는 task-notification 대신 idle_notification으로 일이 끝났음을 알린다
+function teammateIdle(text: string, ts: number): OfficeEvent[] {
+  const out: OfficeEvent[] = [];
+  for (const m of text.matchAll(TEAMMATE_RE)) {
+    let o: any;
+    try {
+      o = JSON.parse(m[2]);
+    } catch {
+      continue;
+    }
+    if (o?.type !== 'idle_notification') continue;
+    out.push({ k: 'teammateIdle', ts: Date.parse(o.timestamp) || ts, agent: 'main', name: String(o.from || m[1]) });
+  }
+  return out;
+}
+
 /** jsonl 한 줄을 사무실 이벤트로 바꾼다. agent는 'main' 또는 서브에이전트 키. */
 export function parseLine(line: string, agent = 'main'): OfficeEvent[] {
   let o: any;
@@ -154,6 +172,7 @@ export function parseLine(line: string, agent = 'main'): OfficeEvent[] {
     const content = o.message?.content;
     if (typeof content === 'string') {
       if (content.includes('<task-notification>')) return notification(content, ts);
+      if (content.includes('<teammate-message')) return isSub ? [] : teammateIdle(content, ts);
       if (isSub || content.startsWith('<') || content.startsWith('This session is being continued')) return [];
       const text = clip(content, 60);
       return text ? [{ k: 'prompt', ts, agent, text }] : [];
@@ -161,9 +180,21 @@ export function parseLine(line: string, agent = 'main'): OfficeEvent[] {
     if (!Array.isArray(content)) return [];
     const out: OfficeEvent[] = [];
     const tur = o.toolUseResult;
-    const async = !!tur && typeof tur === 'object' && (tur.isAsync === true || tur.status === 'async_launched');
+    const teammate = !!tur && typeof tur === 'object' && tur.status === 'teammate_spawned';
+    const async =
+      teammate || (!!tur && typeof tur === 'object' && (tur.isAsync === true || tur.status === 'async_launched'));
     for (const c of content) {
       if (c?.type === 'tool_result') {
+        if (teammate && (tur.agentId || tur.agent_id)) {
+          out.push({
+            k: 'teammate',
+            ts,
+            agent,
+            toolUseId: String(c.tool_use_id),
+            agentId: String(tur.agentId || tur.agent_id),
+            name: String(tur.name ?? ''),
+          });
+        }
         const error = c.is_error === true;
         out.push({
           k: 'toolDone',
@@ -177,6 +208,7 @@ export function parseLine(line: string, agent = 'main'): OfficeEvent[] {
       } else if (c?.type === 'text' && !isSub) {
         const text = clip(c.text, 60);
         if (text.includes('<task-notification>')) out.push(...notification(c.text, ts));
+        else if (c.text.includes('<teammate-message')) out.push(...teammateIdle(c.text, ts));
         else if (text && !text.startsWith('<')) out.push({ k: 'prompt', ts, agent, text });
       }
     }

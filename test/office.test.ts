@@ -95,6 +95,36 @@ describe('Office', () => {
     expect(roomAt(o.agents.get(SUB)!)).toBe('dev');
   });
 
+  it('팀메이트: 기록 파일 키를 spawn 캐릭터에 잇고, idle이면 퇴근한다', () => {
+    const o = new Office();
+    run(
+      o,
+      [
+        [0, ev({ k: 'spawn', agent: 'main', toolUseId: SUB, subagentType: 'general-purpose', description: 'Test 01' })],
+        [100, ev({ k: 'teammate', agent: 'main', toolUseId: SUB, agentId: 'atest-01', name: 'test-01' })],
+        [200, ev({ k: 'toolDone', agent: 'main', id: SUB, error: false, async: true })],
+        [800, ev({ k: 'tool', agent: 'agent:atest-01', id: 'b1', name: 'Bash', room: 'server', label: 'ls' })],
+        [1200, ev({ k: 'toolDone', agent: 'agent:atest-01', id: 'b1', error: false })],
+        [3000, ev({ k: 'teammateIdle', agent: 'main', name: 'test-01' })],
+      ],
+      40000,
+      () => expect(o.agents.has('agent:atest-01')).toBe(false),
+    );
+    expect(o.agents.has(SUB)).toBe(false);
+  });
+
+  it('팀메이트가 spawn 결과보다 먼저 일해도 한 사람으로 합친다', () => {
+    const o = new Office();
+    o.apply(ev({ k: 'spawn', agent: 'main', toolUseId: SUB, subagentType: 'general-purpose', description: 'Test 29' }), 0);
+    o.apply(ev({ k: 'tool', agent: 'agent:atest-29', id: 'b1', name: 'Bash', room: 'server', label: 'ls' }), 10);
+    o.apply(ev({ k: 'teammate', agent: 'main', toolUseId: SUB, agentId: 'atest-29', name: 'test-29' }), 20);
+    expect([...o.agents.keys()]).toEqual(['main', SUB]);
+    expect(o.agents.get(SUB)).toMatchObject({ key: SUB, description: 'Test 29' });
+    o.apply(ev({ k: 'teammateIdle', agent: 'main', name: 'test-29' }), 30);
+    o.snap(100);
+    expect(o.agents.has(SUB)).toBe(false);
+  });
+
   it('에러면 식은땀 + 빨간 말풍선', () => {
     const o = new Office();
     o.apply(ev({ k: 'tool', agent: 'main', id: 'b', name: 'Bash', room: 'server', label: 'x' }), 0);

@@ -75,6 +75,32 @@ describe('parseLine', () => {
     expect(parseLine(line)).toEqual([{ k: 'agentDone', ts: Date.parse(ts), agent: 'main', toolUseId: 'ta' }]);
   });
 
+  it('팀메이트 spawn 결과는 async + teammate 연결', () => {
+    const evs = parseLine(
+      user([{ type: 'tool_result', tool_use_id: 'ta', content: [{ type: 'text', text: 'Spawned successfully.' }] }], {
+        toolUseResult: { status: 'teammate_spawned', agentId: 'atest-01-abc', name: 'test-01' },
+      }),
+    );
+    expect(evs).toMatchObject([
+      { k: 'teammate', toolUseId: 'ta', agentId: 'atest-01-abc', name: 'test-01' },
+      { k: 'toolDone', id: 'ta', async: true },
+    ]);
+  });
+
+  it('teammate-message의 idle_notification은 teammateIdle', () => {
+    const idle = (from: string) =>
+      `<teammate-message teammate_id="${from}" color="blue">\n${JSON.stringify({ type: 'idle_notification', from, timestamp: ts, idleReason: 'available' })}\n</teammate-message>`;
+    const text =
+      'Another Claude session sent a message:\n' +
+      idle('test-01') +
+      '\n\n<teammate-message teammate_id="test-02" color="green" summary="x">\nplain reply\n</teammate-message>\n\n' +
+      idle('test-02');
+    expect(parseLine(user(text))).toEqual([
+      { k: 'teammateIdle', ts: Date.parse(ts), agent: 'main', name: 'test-01' },
+      { k: 'teammateIdle', ts: Date.parse(ts), agent: 'main', name: 'test-02' },
+    ]);
+  });
+
   it('슬래시 명령·메타·요약은 프롬프트가 아니다', () => {
     expect(parseLine(user('<command-name>/clear</command-name>'))).toEqual([]);
     expect(parseLine(user('hi', { isMeta: true }))).toEqual([]);
