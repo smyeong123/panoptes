@@ -1,9 +1,11 @@
 import type { OfficeEvent } from '../shared/events.ts';
 import { roomForTool } from '../shared/rooms.ts';
+import { redact } from './redact.ts';
 
 // 화면에는 요약만 보낸다. 툴 결과 본문이나 프롬프트 전문은 넘기지 않는다.
+// 자르기 전에 가려야 잘림 경계에 걸친 키도 패턴에 걸린다.
 function clip(s: unknown, n: number): string {
-  const t = String(s ?? '').replace(/\s+/g, ' ').trim();
+  const t = redact(String(s ?? '')).replace(/\s+/g, ' ').trim();
   return t.length > n ? t.slice(0, n - 1) + '…' : t;
 }
 

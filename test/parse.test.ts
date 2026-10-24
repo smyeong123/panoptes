@@ -19,6 +19,14 @@ describe('parseLine', () => {
     expect(ev).toMatchObject({ room: 'server', git: true });
   });
 
+  it('명령 속 비밀값은 가려서 보낸다', () => {
+    const cmd = 'curl -H "Authorization: Bearer sk-ant-abcdefghijklmnopqrstuv" https://api.example.com';
+    const [ev] = parseLine(asst([{ type: 'tool_use', id: 't9', name: 'Bash', input: { command: cmd } }]));
+    expect(ev).toMatchObject({ k: 'tool', room: 'server' });
+    expect((ev as { label: string }).label).toContain('[REDACTED');
+    expect((ev as { label: string }).label).not.toContain('sk-ant');
+  });
+
   it('mcp 도구는 정보검색실', () => {
     const [ev] = parseLine(asst([{ type: 'tool_use', id: 't3', name: 'mcp__chrome-devtools__click', input: {} }]));
     expect(ev).toMatchObject({ room: 'search', label: 'chrome-devtools · click' });

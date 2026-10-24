@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import type { FloorInfo, OfficeEvent, SessionInfo } from '../shared/events.ts';
 import { parseLine } from './parse.ts';
+import { redact } from './redact.ts';
 
 export const PROJECTS_DIR = process.env.CLAUDE_PROJECTS_DIR || path.join(os.homedir(), '.claude', 'projects');
 
@@ -93,7 +94,7 @@ export class FloorScanner {
       const top = readSlice(file, 0, Math.min(st.size, 128 * 1024)).toString('utf8');
       cwd = lastMatch(top, /"cwd":"((?:[^"\\]|\\.)*)"/g) ?? lastMatch(tail, /"cwd":"((?:[^"\\]|\\.)*)"/g) ?? '';
     }
-    const h = { mtime: st.mtimeMs, title: unescapeJson(title), cwd: unescapeJson(cwd) };
+    const h = { mtime: st.mtimeMs, title: redact(unescapeJson(title)), cwd: unescapeJson(cwd) };
     this.heads.set(file, h);
     return h;
   }
