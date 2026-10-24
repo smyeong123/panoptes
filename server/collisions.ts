@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Collision, FloorInfo } from '../shared/events.ts';
+import { patchFiles } from './parseCodex.ts';
 
 // 같은 파일을 둘 이상이 고치고 있으면 알린다. agent-tail의 Hub.recomputeConflicts를
 // 한 대짜리로 옮긴 것: git 상태 대신 세션 기록의 Edit/Write 경로를 본다.
@@ -14,15 +15,26 @@ export interface Edit {
   ts: number;
 }
 
-/** jsonl 조각에서 파일 수정 tool_use를 뽑는다. 잘린 첫 줄 같은 깨진 줄은 건너뛴다. */
-export function editsFromText(text: string): Edit[] {
+/**
+ * jsonl 조각에서 파일 수정을 뽑는다: Claude의 Edit/Write tool_use, Codex의 apply_patch.
+ * 잘린 첫 줄 같은 깨진 줄은 건너뛴다. Codex 패치의 상대 경로는 cwd 기준.
+ */
+export function editsFromText(text: string, cwd = ''): Edit[] {
   const out: Edit[] = [];
   for (const line of text.split('\n')) {
-    if (!line.includes('"tool_use"')) continue;
+    const patch = line.includes('*** Begin Patch');
+    if (!patch && !line.includes('"tool_use"')) continue;
     let o: any;
     try {
       o = JSON.parse(line);
     } catch {
+      continue;
+    }
+    if (patch && o?.type === 'response_item') {
+      const p = o.payload ?? {};
+      const body = typeof p.input === 'string' ? p.input : String(p.arguments ?? '');
+      const ts = Date.parse(o.timestamp) || 0;
+      for (const f of patchFiles(body.replace(/\\n/g, '\n'))) out.push({ path: path.resolve(cwd, f), ts });
       continue;
     }
     if (o?.type !== 'assistant' || !Array.isArray(o.message?.content)) continue;
@@ -100,7 +112,7 @@ export class CollisionTracker {
 
   constructor(private sessionFile: (dir: string, id: string) => string) {}
 
-  private load(file: string, agent: () => string, now: number): Cached | null {
+  private load(file: string, agent: () => string, now: number, cwd = ''): Cached | null {
     let st: fs.Stats;
     try {
       st = fs.statSync(file);
@@ -113,7 +125,7 @@ export class CollisionTracker {
     if (hit && hit.mtime === st.mtimeMs) return hit;
     let edits: Edit[] = [];
     try {
-      edits = editsFromText(readTail(file, st.size));
+      edits = editsFromText(readTail(file, st.size), cwd);
     } catch {
       // 읽다 사라진 파일은 다음 번에
     }
@@ -131,7 +143,7 @@ export class CollisionTracker {
         if (now - s.mtime > COLLISION_WINDOW_MS) continue;
         const main = this.sessionFile(f.dir, s.id);
         seen.add(main);
-        const m = this.load(main, () => 'main', now);
+        const m = this.load(main, () => 'main', now, f.cwd);
         if (m?.edits.length) editors.push({ dir: f.dir, id: s.id, agent: 'main', edits: m.edits });
 
         const subDir = path.join(path.dirname(main), s.id, 'subagents');

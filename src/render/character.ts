@@ -8,6 +8,7 @@ function hashHue(s: string): number {
 }
 
 export function lookFor(type: string, role: 'main' | 'sub'): Look {
+  if (role === 'main' && type === 'codex') return { outfit: '#2b2f36', pants: '#1c1f24', hair: '#1a1a1a', hat: 'headset', tag: 'Codex' };
   if (role === 'main') return { outfit: '#d97757', pants: '#5b4636', hair: '#6b4a32', hat: 'beanie', tag: 'Claude' };
   const t = type.toLowerCase();
   if (t === 'explore') return { outfit: '#4fa36b', pants: '#4b5a3a', hair: '#3b2a1d', hat: 'explorer', tag: 'Explore' };

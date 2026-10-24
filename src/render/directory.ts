@@ -103,7 +103,7 @@ export class Directory {
             ? `<ul class="stores">${f.sessions
                 .map(
                   (s) => `<li data-dir="${esc(f.dir)}" data-store="${esc(s.id)}" class="store${current?.id === s.id ? ' current' : ''}${isActive(s, now) ? ' live' : ''}">
-                    <span class="store-dot"></span><span class="store-name">${hotStores.has(`${f.dir}/${s.id}`) ? warn : ''}${esc(s.title || s.id.slice(0, 8))}</span><span class="store-ago">${ago(now - s.mtime)}</span></li>`,
+                    <span class="store-dot"></span><span class="store-name">${s.source === 'codex' ? '<span class="chip">Codex</span>' : ''}${hotStores.has(`${f.dir}/${s.id}`) ? warn : ''}${esc(s.title || s.id.slice(0, 8))}</span><span class="store-ago">${ago(now - s.mtime)}</span></li>`,
                 )
                 .join('')}</ul>`
             : '';

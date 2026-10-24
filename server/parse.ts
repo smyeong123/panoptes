@@ -4,12 +4,12 @@ import { redact } from './redact.ts';
 
 // 화면에는 요약만 보낸다. 툴 결과 본문이나 프롬프트 전문은 넘기지 않는다.
 // 자르기 전에 가려야 잘림 경계에 걸친 키도 패턴에 걸린다.
-function clip(s: unknown, n: number): string {
+export function clip(s: unknown, n: number): string {
   const t = redact(String(s ?? '')).replace(/\s+/g, ' ').trim();
   return t.length > n ? t.slice(0, n - 1) + '…' : t;
 }
 
-function basename(p: unknown): string {
+export function basename(p: unknown): string {
   return String(p ?? '').split(/[\\/]/).filter(Boolean).pop() ?? '';
 }
 
@@ -69,11 +69,11 @@ function boardLines(name: string, input: any): string[] | undefined {
   return undefined;
 }
 
-function isGit(name: string, input: any): boolean {
+export function isGit(name: string, input: any): boolean {
   return (name === 'Bash' || name === 'PowerShell') && /(^|[\s;&|(])git\s/.test(String(input?.command ?? ''));
 }
 
-function toolResultText(content: unknown): string {
+export function toolResultText(content: unknown): string {
   if (typeof content === 'string') return content;
   if (Array.isArray(content)) return content.map((c: any) => (c?.type === 'text' ? c.text : '')).join(' ');
   return '';
