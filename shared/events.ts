@@ -21,11 +21,14 @@ export type OfficeEvent =
   | (Base & { k: 'teammate'; toolUseId: string; agentId: string; name: string })
   | (Base & { k: 'teammateIdle'; name: string });
 
+export type SessionSource = 'claude' | 'codex';
+
 export interface SessionInfo {
   id: string;
   title: string;
   mtime: number;
   size: number;
+  source?: SessionSource;
 }
 
 export interface GitInfo {
@@ -54,5 +57,5 @@ export interface Collision {
 export type ServerMessage =
   | { t: 'floors'; floors: FloorInfo[] }
   | { t: 'collisions'; list: Collision[] }
-  | { t: 'replay'; session: string; events: OfficeEvent[] }
+  | { t: 'replay'; session: string; events: OfficeEvent[]; source?: SessionSource }
   | { t: 'events'; session: string; events: OfficeEvent[] };

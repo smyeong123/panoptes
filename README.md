@@ -19,7 +19,9 @@ npm run dev        # http://127.0.0.1:5173
 npm run build && npm start   # http://127.0.0.1:4317
 ```
 
-Set `CLAUDE_PROJECTS_DIR` to change which folder is read, and `PORT`/`HOST` to change the address of the standalone server. The server only listens on 127.0.0.1 and sends the page summaries only, such as file names or the start of a command.
+Set `CLAUDE_PROJECTS_DIR` to change which folder is read, and `PORT`/`HOST` to change the address of the standalone server. The server only listens on 127.0.0.1 and sends the page summaries only, such as file names or the start of a command. Common secret shapes (API keys, GitHub/Slack tokens, JWTs, `Bearer …`, `PASSWORD=…`) are masked before anything reaches the page.
+
+Codex CLI sessions (`~/.codex/sessions`, or `CODEX_HOME`) show up too: a Codex session lands on the same floor as Claude sessions for that folder, marked with a Codex chip, and its character wears black with a headset.
 
 Switch the theme with 🖥️ Auto / ☀️ Light / 🌙 Dark at the top. Auto follows your system setting. Light is the office by day; dark is the office at night (city lights, glowing screens, floor lamps). All colors live as CSS variables in `src/styles.css`.
 
@@ -39,10 +41,15 @@ Switch the language with 한국어 / English next to the theme toggle. Your choi
 - When a tool fails, Claude breaks into a cold sweat and shows a red bubble.
 - Subagents: when Claude makes a phone call, a subagent arrives by elevator (Explore wears green with a cap, Plan wears purple with glasses). When done, it reports to Claude, says "👋 Heading home!" and leaves by elevator. If it gets more work on the way to report, it goes back to work.
 - Floor directory on the left: one floor per project, one store per session. Floors with activity light up green; click a floor to ride the elevator there. When `/clear` starts a new session on the same floor, the view follows it. Click a store to pin that session.
+- Each floor shows its git state under the name: `⎇ branch · ●uncommitted · ↑ahead ↓behind`. Hover it for the last commit.
+- Same-file warning: when two sessions (or two subagents of one session) edit the same file within 10 minutes, the floor and stores get a ⚠, a toast names the other side, the Dev Room screens flash red and the characters involved shout about it.
 
 ## Structure
 - `server/parse.ts`: turns one jsonl line into office events
-- `server/watcher.ts`: scans floors and stores, and tails sessions (including subagents)
+- `server/watcher.ts`: scans floors and stores (Claude and Codex), polls each floor's git state, and tails sessions (including subagents)
+- `server/parseCodex.ts`: the same for Codex rollout lines
+- `server/collisions.ts`: finds files edited by more than one session or subagent
+- `server/redact.ts`: masks secrets before text leaves the server
 - `server/bridge.ts`: SSE `/api/stream`, shared by the Vite plugin and the standalone server (`server/index.ts`)
 - `src/state/office.ts`: agent state machine (movement, poses, bubbles, subagent lifecycle)
 - `src/render/*`: isometric SVG building, characters, floor directory

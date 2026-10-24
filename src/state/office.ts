@@ -1,4 +1,4 @@
-import type { OfficeEvent, Room } from '../../shared/events.ts';
+import type { OfficeEvent, Room, SessionSource } from '../../shared/events.ts';
 import { t } from '../i18n.ts';
 import { ELEVATOR, ELEVATOR_OUT, rounded, route, SPOTS, spotFor, type Pt } from '../layout.ts';
 
@@ -100,7 +100,8 @@ export class Office {
     this.reset();
   }
 
-  reset() {
+  /** source에 따라 메인 캐릭터가 Claude 또는 Codex 차림이 된다 */
+  reset(source: SessionSource = 'claude') {
     this.agents.clear();
     this.spawnIds.clear();
     this.aliases.clear();
@@ -109,7 +110,7 @@ export class Office {
     this.userBubble = null;
     this.nextSlot = 1;
     const desk = spotFor('desk', 0);
-    this.agents.set('main', this.makeAgent('main', 'main', 'claude', 'Claude', 0, { ...desk }));
+    this.agents.set('main', this.makeAgent('main', 'main', source, source === 'codex' ? 'Codex' : 'Claude', 0, { ...desk }));
     this.main.cur = { room: 'desk', kind: 'idle', label: '', done: true };
   }
 

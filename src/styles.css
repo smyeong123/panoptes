@@ -322,6 +322,15 @@ body {
 .floor-git.dirty {
   color: var(--accent);
 }
+.chip {
+  margin-right: 5px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font: 700 9px/1.4 ui-monospace, 'Consolas', monospace;
+  background: var(--badge-bg);
+  color: var(--badge-ink);
+  vertical-align: 1px;
+}
 .warn {
   margin-right: 4px;
   color: #d92d20;

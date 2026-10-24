@@ -1,9 +1,8 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import path from 'node:path';
 import type { Plugin } from 'vite';
 import type { Collision, OfficeEvent, ServerMessage } from '../shared/events.ts';
 import { CollisionTracker } from './collisions.ts';
-import { FloorScanner, PROJECTS_DIR, SessionTail } from './watcher.ts';
+import { FloorScanner, SessionTail, sessionFile } from './watcher.ts';
 
 interface Client {
   res: ServerResponse;
@@ -15,7 +14,7 @@ export class OfficeHub {
   private clients = new Set<Client>();
   private tails = new Map<string, SessionTail>();
   private scanner = new FloorScanner((floors) => this.broadcast({ t: 'floors', floors }));
-  private tracker = new CollisionTracker((dir, id) => path.join(PROJECTS_DIR, dir, `${id}.jsonl`));
+  private tracker = new CollisionTracker(sessionFile);
   private collisions: Collision[] = [];
   private collisionsJson = '[]';
 
@@ -70,7 +69,7 @@ export class OfficeHub {
       // 이미 따라 읽는 세션이어도 새 클라이언트에겐 처음부터 상태를 재생해 준다
       const tail = live ?? new SessionTail(session, (events) => this.toSession(session, events));
       const events = live ? new SessionTail(session, () => {}).replay() : tail.replay();
-      this.send(client, { t: 'replay', session, events });
+      this.send(client, { t: 'replay', session, events, source: tail.source });
       if (!live) {
         this.tails.set(session, tail);
         tail.start();

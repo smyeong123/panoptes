@@ -87,7 +87,7 @@ function onMessage(msg: ServerMessage) {
   }
   if (msg.session !== key(current)) return;
   if (msg.t === 'replay') {
-    office.reset();
+    office.reset(msg.source);
     scene.clearCharacters();
     for (const ev of msg.events) office.apply(ev, ev.ts);
     office.snap(Date.now());
