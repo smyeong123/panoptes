@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import type { FloorInfo, OfficeEvent, SessionInfo } from '../shared/events.ts';
+import type { FloorInfo, GitInfo, OfficeEvent, SessionInfo } from '../shared/events.ts';
+import { gitSnapshot } from './git.ts';
 import { parseLine } from './parse.ts';
 import { redact } from './redact.ts';
 
@@ -13,6 +14,9 @@ const RECENT_MS = 24 * 3600_000;
 const REPLAY_BYTES = 8 * 1024 * 1024;
 const REPLAY_MAX_EVENTS = 4000;
 const META_WAIT_MS = 3000;
+const GIT_ACTIVE_MS = 5000;
+const GIT_IDLE_MS = 60_000;
+const LIVE_MS = 15_000;
 
 function readSlice(file: string, start: number, end: number): Buffer {
   const len = Math.max(0, end - start);
@@ -62,9 +66,52 @@ interface FileHead {
   cwd: string;
 }
 
+interface GitEntry {
+  info: GitInfo | null;
+  at: number;
+  json: string;
+}
+
+/** 층마다 작업 폴더의 git 상태를 캐시한다. 한 번에 하나씩만 돌려서 scan()을 막지 않는다. */
+class GitPoller {
+  private cache = new Map<string, GitEntry>();
+  private busy = false;
+
+  constructor(private onChange: () => void) {}
+
+  get(cwd: string): GitInfo | undefined {
+    return this.cache.get(cwd)?.info ?? undefined;
+  }
+
+  /** 활동 중인 층은 5초, 아닌 층은 60초마다 새로 읽는다 */
+  refresh(targets: { cwd: string; live: boolean }[]) {
+    if (this.busy) return;
+    const now = Date.now();
+    const due = targets.filter((t) => {
+      if (!t.cwd) return false;
+      const e = this.cache.get(t.cwd);
+      return !e || now - e.at >= (t.live ? GIT_ACTIVE_MS : GIT_IDLE_MS);
+    });
+    if (!due.length) return;
+    this.busy = true;
+    void (async () => {
+      let changed = false;
+      for (const { cwd } of due) {
+        const info = await gitSnapshot(cwd).catch(() => null);
+        const json = JSON.stringify(info);
+        if (this.cache.get(cwd)?.json !== json) changed = true;
+        this.cache.set(cwd, { info, at: Date.now(), json });
+      }
+      this.busy = false;
+      if (changed) this.onChange();
+    })();
+  }
+}
+
 /** 프로젝트 폴더 = 층, 세션 jsonl = 매장. */
 export class FloorScanner {
   private heads = new Map<string, FileHead>();
+  private git = new GitPoller(() => this.scan());
   floors: FloorInfo[] = [];
   private timer?: NodeJS.Timeout;
   private lastJson = '';
@@ -129,14 +176,17 @@ export class FloorScanner {
       const recent = all.filter((s) => now - s.mtime < RECENT_MS);
       const sessions = (recent.length ? recent : all.slice(0, 3)).map(({ cwd: _cwd, ...s }) => s);
       const cwd = all.find((s) => s.cwd)?.cwd ?? '';
+      const git = this.git.get(cwd);
       floors.push({
         dir,
         name: cwd ? path.basename(cwd) || cwd : dir,
         cwd,
         mtime: all[0].mtime,
         sessions,
+        ...(git ? { git } : {}),
       });
     }
+    this.git.refresh(floors.map((f) => ({ cwd: f.cwd, live: now - f.mtime < LIVE_MS })));
     this.floors = floors;
     const json = JSON.stringify(floors);
     if (json !== this.lastJson) {
