@@ -31,6 +31,37 @@ function userText(p: any): string {
   return picked.map((c) => c?.text ?? '').join(' ');
 }
 
+// codex-cli 0.16x는 명령을 'exec' 스크립트 도구로 돌린다:
+//   const r = await tools.exec_command({cmd:"git status", workdir:"…"}); text(r.output);
+const SCRIPT_CALL_RE = /tools\.(\w+)\(\s*\{([\s\S]*?)\}\s*\)/g;
+const CMD_RE = /\bcmd\s*:\s*("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`[^`]*`)/;
+
+function unquote(s: string): string {
+  if (s.startsWith('"')) {
+    try {
+      return JSON.parse(s);
+    } catch {
+      // 아래에서 따옴표만 벗긴다
+    }
+  }
+  return s.slice(1, -1);
+}
+
+/** exec 스크립트 안의 도구 호출들. 첫 호출로 방을 정하고, 더 있으면 라벨에 (+n)을 붙인다. */
+function scriptTool(ts: number, agent: string, id: string, input: string): OfficeEvent {
+  const calls = [...input.matchAll(SCRIPT_CALL_RE)];
+  const extra = calls.length > 1 ? ` (+${calls.length - 1})` : '';
+  const first = calls[0];
+  if (!first) return { k: 'tool', ts, agent, id, name: 'exec', room: 'server', label: clip(input, 60) };
+  const cmd = CMD_RE.exec(first[2]);
+  if (/^(exec_command|shell|local_shell)$/.test(first[1]) && cmd) {
+    const ev = shellTool(ts, agent, id, unquote(cmd[1]));
+    return extra && ev.k === 'tool' ? { ...ev, label: clip(ev.label + extra, 60) } : ev;
+  }
+  const name = first[1];
+  return { k: 'tool', ts, agent, id, name, room: roomForTool(name), label: clip(name + extra, 40) };
+}
+
 function shellTool(ts: number, agent: string, id: string, cmd: string): OfficeEvent {
   const bare = stripShellWrapper(cmd);
   return { k: 'tool', ts, agent, id, name: 'Bash', room: 'server', label: clip(bare, 60), git: isGit('Bash', { command: bare }) || undefined };
@@ -42,6 +73,8 @@ function patchTool(ts: number, agent: string, id: string, text: string): OfficeE
 }
 
 function outputError(raw: unknown): { error: boolean; text: string } {
+  // exec 도구의 출력은 [{type:'input_text', text}, …] 배열로 온다
+  if (Array.isArray(raw)) raw = raw.map((c: any) => (typeof c?.text === 'string' ? c.text : '')).join('\n');
   let text = typeof raw === 'string' ? raw : JSON.stringify(raw ?? '');
   let code: number | undefined;
   try {
@@ -54,10 +87,13 @@ function outputError(raw: unknown): { error: boolean; text: string } {
     // 평문 출력
   }
   if (code === undefined) {
-    const m = /(?:Process exited with code|Exit code:?)\s*(\d+)/i.exec(text);
+    const m = /(?:Process exited with code|Exit code:?|exit_code"?:)\s*(\d+)/i.exec(text);
     if (m) code = Number(m[1]);
   }
-  return { error: code !== undefined && code !== 0, text };
+  const failed = /^Script (?:failed|error)/im.test(text);
+  // 머리말(Script completed / Wall time / Output:)은 빼고 본문을 에러 문구로
+  const body = text.replace(/^(Script \w+|Wall time [^\n]*|Output:)\s*$/gim, '').trim();
+  return { error: failed || (code !== undefined && code !== 0), text: body || text };
 }
 
 export function parseCodexLine(line: string, agent = 'main'): OfficeEvent[] {
@@ -114,6 +150,7 @@ export function parseCodexLine(line: string, agent = 'main'): OfficeEvent[] {
       const id = String(p.call_id ?? p.id);
       const input = String(p.input ?? '');
       if (p.name === 'apply_patch' || input.includes('*** Begin Patch')) return [patchTool(ts, agent, id, input)];
+      if (p.name === 'exec' || input.includes('tools.')) return [scriptTool(ts, agent, id, input)];
       const name = String(p.name ?? 'tool');
       return [{ k: 'tool', ts, agent, id, name, room: roomForTool(name), label: clip(name, 40) }];
     }

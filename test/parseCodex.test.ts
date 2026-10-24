@@ -49,6 +49,38 @@ describe('parseCodexLine', () => {
     expect(ex).toMatchObject({ room: 'server', label: 'ls -la' });
   });
 
+  it('0.16x exec 스크립트 도구: 안의 exec_command를 서버실 명령으로 본다', () => {
+    const input = 'const r = await tools.exec_command({cmd:"git log --oneline -5",workdir:"/repo",max_output_tokens:1000}); text(r.output);\n';
+    const [ev] = parseCodexLine(item({ type: 'custom_tool_call', name: 'exec', call_id: 'c5', input }));
+    expect(ev).toMatchObject({ k: 'tool', id: 'c5', name: 'Bash', room: 'server', label: 'git log --oneline -5', git: true });
+    const two = 'await tools.exec_command({cmd:"ls"}); await tools.exec_command({cmd:"pwd"});';
+    const [ev2] = parseCodexLine(item({ type: 'custom_tool_call', name: 'exec', call_id: 'c6', input: two }));
+    expect(ev2).toMatchObject({ room: 'server', label: 'ls (+1)' });
+  });
+
+  it('exec 출력 배열: 성공은 toolDone, 종료 코드가 있으면 에러 본문을 보여 준다', () => {
+    const ok = item({
+      type: 'custom_tool_call_output',
+      call_id: 'c5',
+      output: [
+        { type: 'input_text', text: 'Script completed\nWall time 0.6 seconds\nOutput:\n' },
+        { type: 'input_text', text: 'cf7beb8 Merge pull request\n' },
+      ],
+    });
+    expect(parseCodexLine(ok)).toMatchObject([{ k: 'toolDone', id: 'c5', error: false }]);
+    const bad = item({
+      type: 'custom_tool_call_output',
+      call_id: 'c7',
+      output: [
+        { type: 'input_text', text: 'Script completed\nOutput:\n' },
+        { type: 'input_text', text: 'ls: does-not-exist: No such file or directory\nProcess exited with code 1' },
+      ],
+    });
+    const [done] = parseCodexLine(bad);
+    expect(done).toMatchObject({ k: 'toolDone', error: true });
+    expect((done as { errText: string }).errText).toContain('No such file');
+  });
+
   it('apply_patch는 개발실 Edit, 라벨은 파일 이름', () => {
     const [ev] = parseCodexLine(item({ type: 'custom_tool_call', name: 'apply_patch', call_id: 'c3', input: patch }));
     expect(ev).toMatchObject({ k: 'tool', name: 'Edit', room: 'dev', label: 'App.ts, new.ts' });
