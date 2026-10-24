@@ -1,5 +1,5 @@
 import type { FloorInfo, ServerMessage } from '../shared/events.ts';
-import { ago, Directory, FloorNumbers, isActive } from './render/directory.ts';
+import { ago, Directory, FloorNumbers, gitSummary, isActive } from './render/directory.ts';
 import { Scene } from './render/scene.ts';
 import { initLang, t } from './i18n.ts';
 import { Office } from './state/office.ts';
@@ -163,6 +163,7 @@ function hud() {
   const s = f?.sessions.find((x) => x.id === current?.id);
   if (!moving) $('#elevator-ind').textContent = current ? `${nums.of(current.dir)}F` : '—';
   $('#floor-name').textContent = f?.name ?? t('hud.searching');
+  $('#floor-git').textContent = f?.git ? gitSummary(f.git) : '';
   $('#store-name').textContent = s ? `${s.title || s.id.slice(0, 8)} · ${ago(Date.now() - s.mtime)}` : '';
   const btn = $<HTMLButtonElement>('#pin');
   btn.textContent = pinned ? t('hud.pinned') : t('hud.follow');

@@ -1,4 +1,4 @@
-import type { FloorInfo, SessionInfo } from '../../shared/events.ts';
+import type { FloorInfo, GitInfo, SessionInfo } from '../../shared/events.ts';
 import { t } from '../i18n.ts';
 import { esc } from './iso.ts';
 
@@ -32,6 +32,21 @@ export function ago(ms: number): string {
 
 export function isActive(s: SessionInfo, now: number): boolean {
   return now - s.mtime < ACTIVE_MS;
+}
+
+/** ⎇ 브랜치 · ●미커밋 · ↑ahead ↓behind (0인 항목은 뺀다) */
+export function gitSummary(g: GitInfo): string {
+  const parts = [`⎇ ${g.branch}`];
+  if (g.dirty) parts.push(`●${g.dirty}`);
+  const ab = [g.ahead ? `↑${g.ahead}` : '', g.behind ? `↓${g.behind}` : ''].filter(Boolean).join(' ');
+  if (ab) parts.push(ab);
+  return parts.join(' · ');
+}
+
+function gitLine(g: GitInfo | undefined): string {
+  if (!g) return '';
+  const title = g.head ? `${g.head.sha} ${g.head.subject}` : '';
+  return `<div class="floor-git${g.dirty ? ' dirty' : ''}" title="${esc(title)}">${esc(gitSummary(g))}</div>`;
 }
 
 /** 처음 본 순서대로 1F, 2F… 층 번호를 고정한다. 처음엔 오래된 프로젝트가 아래층. */
@@ -91,7 +106,7 @@ export class Directory {
             : '';
           return `<li class="floor${here ? ' here' : ''}${live ? ' live' : ''}" data-floor="${esc(f.dir)}" title="${esc(f.cwd || f.dir)}">
             <div class="floor-row"><span class="fl">${this.nums.of(f.dir)}F</span><span class="floor-name">${esc(f.name)}</span>
-            <span class="lamp"></span><span class="count">${f.sessions.length}</span></div>${stores}</li>`;
+            <span class="lamp"></span><span class="count">${f.sessions.length}</span></div>${gitLine(f.git)}${stores}</li>`;
         })
         .join('')}</ol>`;
   }

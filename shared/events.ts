@@ -28,12 +28,21 @@ export interface SessionInfo {
   size: number;
 }
 
+export interface GitInfo {
+  branch: string;
+  dirty: number;
+  ahead: number;
+  behind: number;
+  head: { sha: string; subject: string } | null;
+}
+
 export interface FloorInfo {
   dir: string;
   name: string;
   cwd: string;
   mtime: number;
   sessions: SessionInfo[];
+  git?: GitInfo;
 }
 
 export type ServerMessage =
