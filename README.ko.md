@@ -21,7 +21,7 @@ npm run build && npm start   # http://127.0.0.1:4317
 
 `CLAUDE_PROJECTS_DIR`로 읽을 폴더를, `PORT`/`HOST`로 단독 실행 서버 주소를 바꿀 수 있습니다. 서버는 127.0.0.1에만 열리고, 화면에는 파일 이름이나 명령 앞부분 같은 요약만 보냅니다. 흔한 비밀값 모양(API 키, GitHub/Slack 토큰, JWT, `Bearer …`, `PASSWORD=…`)은 화면에 보내기 전에 가립니다.
 
-Codex CLI 세션(`~/.codex/sessions`, 또는 `CODEX_HOME`)도 보입니다. 같은 폴더의 Claude 세션과 같은 층에 Codex 표시를 달고 올라오고, 캐릭터는 헤드셋을 쓴 검은 옷차림입니다.
+Codex CLI 세션(`~/.codex/sessions`, 또는 `CODEX_HOME`)도 보입니다. 같은 폴더의 Claude 세션과 같은 층에 Codex 표시를 달고 올라오고, 캐릭터는 헤드셋을 쓴 검은 옷차림입니다. Claude가 Codex에게 일을 맡기면(Bash로 `codex exec "…"`, 또는 `mcp__codex__*` 도구) Claude가 전화를 걸고, Codex는 따로 매장을 열지 않고 Claude의 서브에이전트로 엘리베이터를 타고 와서 일한 뒤 명령이 끝나면 보고하고 떠납니다.
 
 상단의 🖥️ 자동 / ☀️ 라이트 / 🌙 다크로 테마를 바꿉니다. 자동은 시스템 설정을 따릅니다. 라이트는 낮의 사무실, 다크는 밤의 사무실(야경, 켜진 화면, 스탠드 불빛)입니다. 색은 모두 `src/styles.css`의 CSS 변수에 모여 있습니다.
 

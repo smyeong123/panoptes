@@ -9,7 +9,7 @@ interface Base {
 }
 
 export type OfficeEvent =
-  | (Base & { k: 'tool'; id: string; name: string; room: Room; label: string; git?: boolean; board?: string[] })
+  | (Base & { k: 'tool'; id: string; name: string; room: Room; label: string; git?: boolean; board?: string[]; call?: boolean })
   | (Base & { k: 'toolDone'; id: string; error: boolean; errText?: string; async?: boolean })
   | (Base & { k: 'think'; text: string })
   | (Base & { k: 'say'; text: string })

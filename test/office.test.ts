@@ -27,6 +27,39 @@ type NoTs<E> = E extends OfficeEvent ? Omit<E, 'ts'> : never;
 const ev = (e: NoTs<OfficeEvent>) => ({ ts: 0, ...e }) as OfficeEvent;
 
 describe('Office', () => {
+  it('codex exec: Claude는 전화하고, Codex 서브에이전트는 일하다 명령이 끝나면 보고하고 떠난다', () => {
+    const o = new Office();
+    const phases = new Set<string>();
+    let mainKind = '';
+    let subRoom: string | null = null;
+    let subType = '';
+    run(
+      o,
+      [
+        [0, ev({ k: 'tool', agent: 'main', id: 'tc', name: 'Bash', room: 'desk', label: 'Ask Codex', call: true })],
+        [0, ev({ k: 'spawn', agent: 'main', toolUseId: 'tc', subagentType: 'Codex', description: 'list server' })],
+        [3000, ev({ k: 'tool', agent: 'tc', id: 'c1', name: 'Bash', room: 'server', label: 'ls server' })],
+        [9000, ev({ k: 'toolDone', agent: 'tc', id: 'c1', error: false })],
+        [10000, ev({ k: 'toolDone', agent: 'main', id: 'tc', error: false })],
+      ],
+      40000,
+      (now) => {
+        const sub = o.agents.get('tc');
+        if (o.main.cur?.kind === 'phone') mainKind = 'phone';
+        if (now === 8000 && sub) subRoom = roomAt(sub);
+        if (sub) {
+          phases.add(sub.phase);
+          subType = sub.type;
+        }
+      },
+    );
+    expect(mainKind).toBe('phone');
+    expect(subType).toBe('Codex');
+    expect(subRoom).toBe('server');
+    expect(phases.has('reporting')).toBe(true);
+    expect(phases.has('gone') || phases.has('leaving')).toBe(true);
+  });
+
   it('툴을 쓰면 그 방으로 걸어간다', () => {
     const o = new Office();
     const seen = new Set<string | null>();

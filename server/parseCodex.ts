@@ -116,6 +116,8 @@ export function parseCodexLine(line: string, agent = 'main'): OfficeEvent[] {
   switch (p.type) {
     case 'message': {
       if (p.role === 'user') {
+        // 서브에이전트로 붙은 Codex의 지시문은 Claude가 보낸 것이라 사용자 말풍선에 띄우지 않는다
+        if (agent !== 'main') return [];
         const text = clip(userText(p), 60);
         return text ? [{ k: 'prompt', ts, agent, text }] : [];
       }

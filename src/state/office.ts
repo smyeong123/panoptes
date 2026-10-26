@@ -225,7 +225,7 @@ export class Office {
         this.backToWork(a, now);
         a.queue.push({
           room: ev.room,
-          kind: ev.name === 'Agent' || ev.name === 'Task' ? 'phone' : 'tool',
+          kind: ev.call || ev.name === 'Agent' || ev.name === 'Task' ? 'phone' : 'tool',
           toolId: ev.id,
           name: ev.name,
           label: ev.label || fallbackLabel(ev.name),
