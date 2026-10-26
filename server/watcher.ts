@@ -140,11 +140,17 @@ class CodexIndex {
   private links = new Map<string, string>();
   private linked = new Set<string>();
   // 층 스캐너가 Claude 기록에서 찾은, 아직 짝이 없는 codex 호출
-  private pending = new Map<string, { ts: number; cwd: string }>();
+  private pending = new Map<string, { ts: number; cwd: string; end?: number }>();
 
   /** Claude 기록에서 찾은 codex 호출을 올려 둔다. 다음 scan()에서 짝을 찾는다. */
   addHandoff(toolUseId: string, ts: number, cwd: string) {
-    if (!this.links.has(toolUseId)) this.pending.set(toolUseId, { ts, cwd });
+    if (!this.links.has(toolUseId) && !this.pending.has(toolUseId)) this.pending.set(toolUseId, { ts, cwd });
+  }
+
+  /** 올려 둔 codex 호출이 끝났다. 그 뒤에 시작한 Codex 세션은 이 호출의 것이 아니다. */
+  handoffDone(toolUseId: string, end: number) {
+    const h = this.pending.get(toolUseId);
+    if (h) h.end = end;
   }
 
   get(id: string): CodexSession | undefined {
@@ -159,13 +165,14 @@ class CodexIndex {
    * Claude의 codex 호출(toolUseId, ts, cwd)에 맞는 Codex 세션을 찾아 묶는다.
    * 호출 직후에 시작했고 아직 다른 호출에 묶이지 않은 세션 중 가장 이른 것. 같은 폴더를 먼저 고른다.
    * 사용자가 직접 연 대화형 세션(codex-tui)은 고르지 않는다.
+   * 호출이 이미 끝났다면(end) 그 전에 시작한 세션만 본다. 바로 실패한 호출이 다음 호출의 세션을 가져가지 않게.
    */
-  link(toolUseId: string, ts: number, cwd: string): CodexSession | undefined {
+  link(toolUseId: string, ts: number, cwd: string, end?: number): CodexSession | undefined {
     const known = this.links.get(toolUseId);
     if (known) return this.byId.get(known);
     const candidates = [...this.byId.values()]
       .filter((s) => !this.linked.has(s.id) && s.originator !== 'codex-tui')
-      .filter((s) => s.start >= ts - LINK_BEFORE_MS && s.start <= ts + LINK_AFTER_MS)
+      .filter((s) => s.start >= ts - LINK_BEFORE_MS && s.start <= Math.min(ts + LINK_AFTER_MS, end ?? Infinity))
       .sort((a, b) => Number(b.cwd === cwd) - Number(a.cwd === cwd) || a.start - b.start);
     const hit = candidates[0];
     if (!hit) return undefined;
@@ -259,7 +266,9 @@ class CodexIndex {
     this.byId = new Map(out.map((s) => [s.id, s]));
     // 누가 그 Claude 세션을 보고 있지 않아도 묶어 둬야 Codex 매장이 따로 튀어나오지 않는다
     for (const [toolUseId, h] of [...this.pending].sort((a, b) => a[1].ts - b[1].ts)) {
-      if (this.link(toolUseId, h.ts, h.cwd) || now - h.ts > LINK_AFTER_MS) this.pending.delete(toolUseId);
+      if (this.link(toolUseId, h.ts, h.cwd, h.end) || h.end !== undefined || now - h.ts > LINK_AFTER_MS) {
+        this.pending.delete(toolUseId);
+      }
     }
     return out;
   }
@@ -309,8 +318,12 @@ export class FloorScanner {
     this.heads.set(file, h);
     if (tail.includes('codex')) {
       for (const l of tail.split('\n')) {
-        if (!l.includes('codex') || !l.includes('"tool_use"')) continue;
-        for (const e of parseLine(l)) if (e.k === 'spawn' && e.subagentType === 'Codex') codexIndex.addHandoff(e.toolUseId, e.ts, h.cwd);
+        if (!l.includes('"tool_use"') && !l.includes('"tool_result"')) continue;
+        for (const e of parseLine(l)) {
+          if (e.k === 'spawn' && e.subagentType === 'Codex') codexIndex.addHandoff(e.toolUseId, e.ts, h.cwd);
+          // 백그라운드로 띄운 호출은 바로 결과가 오므로 끝으로 치지 않는다
+          else if (e.k === 'toolDone' && !e.async) codexIndex.handoffDone(e.id, e.ts);
+        }
       }
     }
     return h;
@@ -400,8 +413,8 @@ export class SessionTail {
   readonly subDir: string;
   readonly source: SessionSource;
   private parse: (line: string, agent: string) => OfficeEvent[];
-  // Claude가 codex exec로 맡긴 일: 아직 기록을 못 찾은 호출(toolUseId → ts)과 찾은 기록(파일 → toolUseId)
-  private handoffs = new Map<string, number>();
+  // Claude가 codex exec로 맡긴 일: 아직 기록을 못 찾은 호출(toolUseId → 시작·끝)과 찾은 기록(파일 → toolUseId)
+  private handoffs = new Map<string, { ts: number; end?: number }>();
   private codexFiles = new Map<string, string>();
   private cwd = '';
 
@@ -434,17 +447,23 @@ export class SessionTail {
       }
     }
     const events = this.parse(line, agent);
-    for (const e of events) if (e.k === 'spawn' && e.subagentType === 'Codex') this.handoffs.set(e.toolUseId, e.ts);
+    for (const e of events) {
+      if (e.k === 'spawn' && e.subagentType === 'Codex') this.handoffs.set(e.toolUseId, { ts: e.ts });
+      else if (e.k === 'toolDone' && !e.async) {
+        const h = this.handoffs.get(e.id);
+        if (h) h.end = e.ts;
+      }
+    }
     return events;
   }
 
   /** 아직 못 찾은 Codex 호출의 기록을 찾아 붙인다 */
   private linkCodex() {
-    for (const [toolUseId, ts] of this.handoffs) {
-      const cx = codexIndex.link(toolUseId, ts, this.cwd);
-      if (!cx) continue;
-      this.codexFiles.set(cx.file, toolUseId);
-      this.handoffs.delete(toolUseId);
+    for (const [toolUseId, h] of this.handoffs) {
+      const cx = codexIndex.link(toolUseId, h.ts, this.cwd, h.end);
+      // 끝났는데도 짝이 없으면 Codex가 뜨지 못한 호출이다
+      if (cx) this.codexFiles.set(cx.file, toolUseId);
+      if (cx || h.end !== undefined) this.handoffs.delete(toolUseId);
     }
   }
 

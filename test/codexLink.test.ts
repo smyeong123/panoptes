@@ -41,9 +41,33 @@ beforeAll(async () => {
     },
   ];
   fs.writeFileSync(path.join(projects, dir, 's1.jsonl'), claude.map((l) => JSON.stringify(l)).join('\n') + '\n');
+  // 바로 실패한 호출(timeout이 없어서) 뒤에 다시 부른 호출: Codex 세션은 두 번째 호출의 것이다
+  const retry = [
+    { type: 'user', cwd, timestamp: iso(10_000), message: { content: 'ask codex again' } },
+    {
+      type: 'assistant',
+      cwd,
+      timestamp: iso(11_000),
+      message: { content: [{ type: 'tool_use', id: 'toolu_fail', name: 'Bash', input: { command: 'timeout 60 codex exec "count files"' } }] },
+    },
+    {
+      type: 'user',
+      cwd,
+      timestamp: iso(11_100),
+      message: { content: [{ type: 'tool_result', tool_use_id: 'toolu_fail', is_error: true, content: 'command not found: timeout' }] },
+    },
+    {
+      type: 'assistant',
+      cwd,
+      timestamp: iso(14_000),
+      message: { content: [{ type: 'tool_use', id: 'toolu_ok', name: 'Bash', input: { command: 'codex exec "count files"' } }] },
+    },
+  ];
+  fs.writeFileSync(path.join(projects, dir, 's2.jsonl'), retry.map((l) => JSON.stringify(l)).join('\n') + '\n');
   // 직접 연 대화형 세션은 시간이 맞아도 묶이면 안 된다
   rollout('tui', '0199aaaa-0000-7000-8000-000000000001', 1500, 'codex-tui');
   rollout('exec', '0199aaaa-0000-7000-8000-000000000002', 3000, 'codex_exec');
+  rollout('retry', '0199aaaa-0000-7000-8000-000000000003', 14_400, 'codex_exec');
   watcher = await import('../server/watcher.ts');
   watcher.codexIndex.scan(Date.now());
 });
@@ -62,6 +86,12 @@ describe('Codex 서브에이전트 연결', () => {
   it('새 클라이언트가 다시 재생해도 같은 세션에 붙는다', () => {
     const events = new watcher.SessionTail(`${dir}/s1`, () => {}).replay();
     expect(events.filter((e) => e.k === 'tool' && e.agent === 'toolu_cx')).toHaveLength(1);
+  });
+
+  it('바로 실패한 호출은 그 뒤에 시작한 Codex 세션을 가져가지 않는다', () => {
+    const events = new watcher.SessionTail(`${dir}/s2`, () => {}).replay();
+    expect(events.filter((e) => e.k === 'tool' && e.agent === 'toolu_ok')).toHaveLength(1);
+    expect(events.filter((e) => e.agent === 'toolu_fail')).toHaveLength(0);
   });
 
   it('층 스캐너가 보는 사람 없이도 묶고, 묶인 Codex 세션은 매장 목록에서 뺀다', () => {
