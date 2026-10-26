@@ -18,6 +18,8 @@ export function encodeCwd(cwd: string): string {
 const SCAN_MS = 1000;
 const TAIL_MS = 250;
 const RECENT_MS = 24 * 3600_000;
+const HANDOFF_CHUNK = 4 * 1024 * 1024;
+const TOOL_RESULT_ID_RE = /"tool_use_id":"([^"]+)"/;
 const REPLAY_BYTES = 8 * 1024 * 1024;
 const REPLAY_MAX_EVENTS = 4000;
 const META_WAIT_MS = 3000;
@@ -71,6 +73,8 @@ interface FileHead {
   mtime: number;
   title: string;
   cwd: string;
+  // codex 호출을 어디까지 찾아봤는지(바이트)
+  scanned: number;
 }
 
 interface GitEntry {
@@ -141,6 +145,11 @@ class CodexIndex {
   private linked = new Set<string>();
   // 층 스캐너가 Claude 기록에서 찾은, 아직 짝이 없는 codex 호출
   private pending = new Map<string, { ts: number; cwd: string; end?: number }>();
+
+  /** 아직 짝을 기다리는 codex 호출인지 */
+  isPending(toolUseId: string): boolean {
+    return this.pending.has(toolUseId);
+  }
 
   /** Claude 기록에서 찾은 codex 호출을 올려 둔다. 다음 scan()에서 짝을 찾는다. */
   addHandoff(toolUseId: string, ts: number, cwd: string) {
@@ -300,7 +309,41 @@ export class FloorScanner {
     clearInterval(this.timer);
   }
 
-  private head(file: string, st: fs.Stats): FileHead {
+  /**
+   * from 바이트부터 끝까지 codex 호출과 그 결과를 찾아 codexIndex에 올린다. 다 읽은 줄 끝을 돌려준다.
+   * 꼬리만 보면 서버를 다시 띄웠을 때 이미 지나간 호출을 놓쳐 Codex 매장이 따로 튀어나온다.
+   */
+  private scanHandoffs(file: string, from: number, size: number, cwd: string): number {
+    let at = from;
+    let skip = false;
+    while (at < size) {
+      const buf = readSlice(file, at, Math.min(size, at + HANDOFF_CHUNK));
+      const cut = buf.lastIndexOf(0x0a);
+      if (cut < 0) {
+        // 아직 덜 써진 줄이면 다음에. 한 덩어리보다 긴 줄은 건너뛴다(codex 호출일 리 없다).
+        if (buf.length < HANDOFF_CHUNK) break;
+        at += buf.length;
+        skip = true;
+        continue;
+      }
+      const begin = skip ? buf.indexOf(0x0a) + 1 : 0;
+      skip = false;
+      for (const l of buf.subarray(begin, cut).toString('utf8').split('\n')) {
+        const use = l.includes('"tool_use"') && l.includes('codex');
+        const result = !use && l.includes('"tool_result"') && codexIndex.isPending(TOOL_RESULT_ID_RE.exec(l)?.[1] ?? '');
+        if (!use && !result) continue;
+        for (const e of parseLine(l)) {
+          if (e.k === 'spawn' && e.subagentType === 'Codex') codexIndex.addHandoff(e.toolUseId, e.ts, cwd);
+          // 백그라운드로 띄운 호출은 바로 결과가 오므로 끝으로 치지 않는다
+          else if (e.k === 'toolDone' && !e.async) codexIndex.handoffDone(e.id, e.ts);
+        }
+      }
+      at += cut + 1;
+    }
+    return at;
+  }
+
+  private head(file: string, st: fs.Stats, now: number): FileHead {
     const cached = this.heads.get(file);
     if (cached && cached.mtime === st.mtimeMs) return cached;
     const tail = readSlice(file, Math.max(0, st.size - 256 * 1024), st.size).toString('utf8');
@@ -314,18 +357,12 @@ export class FloorScanner {
       const top = readSlice(file, 0, Math.min(st.size, 128 * 1024)).toString('utf8');
       cwd = lastMatch(top, /"cwd":"((?:[^"\\]|\\.)*)"/g) ?? lastMatch(tail, /"cwd":"((?:[^"\\]|\\.)*)"/g) ?? '';
     }
-    const h = { mtime: st.mtimeMs, title: redact(unescapeJson(title)), cwd: unescapeJson(cwd) };
+    cwd = unescapeJson(cwd);
+    // 처음 보는 기록은 최근 것만 처음부터 훑는다. 줄어든 파일은 새로 쓰인 것으로 본다.
+    let from = cached && cached.scanned <= st.size ? cached.scanned : now - st.mtimeMs < RECENT_MS ? 0 : st.size;
+    from = this.scanHandoffs(file, from, st.size, cwd);
+    const h = { mtime: st.mtimeMs, title: redact(unescapeJson(title)), cwd, scanned: from };
     this.heads.set(file, h);
-    if (tail.includes('codex')) {
-      for (const l of tail.split('\n')) {
-        if (!l.includes('"tool_use"') && !l.includes('"tool_result"')) continue;
-        for (const e of parseLine(l)) {
-          if (e.k === 'spawn' && e.subagentType === 'Codex') codexIndex.addHandoff(e.toolUseId, e.ts, h.cwd);
-          // 백그라운드로 띄운 호출은 바로 결과가 오므로 끝으로 치지 않는다
-          else if (e.k === 'toolDone' && !e.async) codexIndex.handoffDone(e.id, e.ts);
-        }
-      }
-    }
     return h;
   }
 
@@ -369,7 +406,7 @@ export class FloorScanner {
         const file = path.join(full, n);
         const st = statOrNull(file);
         if (!st || !st.size) continue;
-        const h = this.head(file, st);
+        const h = this.head(file, st, now);
         all.push({ id: n.slice(0, -6), title: h.title, mtime: st.mtimeMs, size: st.size, cwd: h.cwd });
       }
       if (!all.length) continue;

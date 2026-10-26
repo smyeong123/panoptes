@@ -64,10 +64,33 @@ beforeAll(async () => {
     },
   ];
   fs.writeFileSync(path.join(projects, dir, 's2.jsonl'), retry.map((l) => JSON.stringify(l)).join('\n') + '\n');
+  // 호출 뒤로 기록이 한참 쌓인 세션: 서버를 새로 띄우면 꼬리만 봐서는 그 호출이 안 보인다
+  const long = [
+    {
+      type: 'assistant',
+      cwd,
+      timestamp: iso(20_000),
+      message: { content: [{ type: 'tool_use', id: 'toolu_old', name: 'Bash', input: { command: 'codex exec "review"' } }] },
+    },
+    {
+      type: 'user',
+      cwd,
+      timestamp: iso(25_000),
+      message: { content: [{ type: 'tool_result', tool_use_id: 'toolu_old', content: 'done' }] },
+    },
+    ...Array.from({ length: 400 }, (_, i) => ({
+      type: 'user',
+      cwd,
+      timestamp: iso(26_000 + i),
+      message: { content: 'x'.repeat(1024) },
+    })),
+  ];
+  fs.writeFileSync(path.join(projects, dir, 's3.jsonl'), long.map((l) => JSON.stringify(l)).join('\n') + '\n');
   // 직접 연 대화형 세션은 시간이 맞아도 묶이면 안 된다
   rollout('tui', '0199aaaa-0000-7000-8000-000000000001', 1500, 'codex-tui');
   rollout('exec', '0199aaaa-0000-7000-8000-000000000002', 3000, 'codex_exec');
   rollout('retry', '0199aaaa-0000-7000-8000-000000000003', 14_400, 'codex_exec');
+  rollout('old', '0199aaaa-0000-7000-8000-000000000004', 20_500, 'codex_exec');
   watcher = await import('../server/watcher.ts');
   watcher.codexIndex.scan(Date.now());
 });
@@ -102,5 +125,7 @@ describe('Codex 서브에이전트 연결', () => {
     expect(stores.map((s) => s.id)).toContain('s1');
     expect(stores.map((s) => s.id)).toContain('0199aaaa-0000-7000-8000-000000000001');
     expect(stores.map((s) => s.id)).not.toContain('0199aaaa-0000-7000-8000-000000000002');
+    // 첫 스캔부터: 256KB보다 앞에 있는 호출도 찾아 묶는다
+    expect(stores.map((s) => s.id)).not.toContain('0199aaaa-0000-7000-8000-000000000004');
   });
 });
