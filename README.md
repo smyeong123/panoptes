@@ -10,49 +10,33 @@ An isometric office that moves along with your Claude Code sessions.
 
 </div>
 
-Panoptes tails the session logs that Claude Code writes (`~/.claude/projects/**/*.jsonl`) every 0.25 seconds and turns them into an isometric office, where the characters move in step with your terminal.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/screenshot-dark.png">
+  <img src="docs/images/screenshot-light.png" alt="Panoptes showing a project floor: Claude editing code in the Dev Room, an Explore subagent reading in the Library, a todo list on the whiteboard, and the floor directory with git branch status">
+</picture>
+
+Panoptes shows what your AI coding agents are doing as you work. It reads the session logs that Claude Code and Codex CLI write on your machine, then animates characters in a small isometric office to match.
+
+- **A room for each kind of work.** Reading files happens in the library, edits in the dev room, shell commands in the server room, and web searches in the research room.
+- **Subagents arrive by elevator.** They work alongside Claude, report back, and go home when they finish. Codex runs that Claude starts show up as subagents too.
+- **One floor per project.** Each floor shows that project's git branch and status, plus a store for each session.
+- **Same-file warnings.** You get an alert when two sessions edit the same file at the same time.
+- **Light and dark themes**, with Korean and English UI.
+
+## Quick start
 
 ```bash
 npm install
-npm run dev        # http://127.0.0.1:5173
+npm run dev                  # http://127.0.0.1:5173
 # or
 npm run build && npm start   # http://127.0.0.1:4317
 ```
 
-Set `CLAUDE_PROJECTS_DIR` to change which folder is read, and `PORT`/`HOST` to change the address of the standalone server. The server only listens on 127.0.0.1 and sends the page summaries only, such as file names or the start of a command. Common secret shapes (API keys, GitHub/Slack tokens, JWTs, `Bearer …`, `PASSWORD=…`) are masked before anything reaches the page.
+Panoptes runs entirely on your machine. It listens on 127.0.0.1 only and masks common secrets before anything reaches the page. See [SECURITY.md](SECURITY.md) for details.
 
-Codex CLI sessions (`~/.codex/sessions`, or `CODEX_HOME`) show up too: a Codex session lands on the same floor as Claude sessions for that folder, marked with a Codex chip, and its character wears black with a headset. When Claude hands work to Codex (`codex exec "…"` via Bash, or a `mcp__codex__*` tool), Claude makes a phone call and Codex arrives by elevator as Claude's subagent instead of opening a separate store, then reports back and leaves when the command returns.
+## More
 
-Switch the theme with 🖥️ Auto / ☀️ Light / 🌙 Dark at the top. Auto follows your system setting. Light is the office by day; dark is the office at night (city lights, glowing screens, floor lamps). All colors live as CSS variables in `src/styles.css`.
-
-Switch the language with 한국어 / English next to the theme toggle. Your choice is remembered; on first visit it follows the browser language.
-
-## Rooms
-| Room | What happens there |
-|---|---|
-| 📚 Library | Read, Grep, Glob: opens a book and reads |
-| 💻 Dev Room | Edit, Write: code scrolls across the iMac screen |
-| 🗄️ Server Room | Bash, PowerShell: rack lights blink faster while it runs, and a git badge shows for git commands |
-| 🌐 Research | WebSearch, WebFetch, `mcp__*`: the globe spins and the antenna sends signals |
-| 🗒️ Meeting Room | TodoWrite, TaskCreate, ExitPlanMode plans: written on the whiteboard |
-| 🧑‍💻 Your desk | AskUserQuestion, ExitPlanMode: walks over to your desk to ask |
-
-- While thinking, Claude rests its chin on a hand and the thinking summary shows in a cloud bubble. If the summary is empty, it shows just "…".
-- When a tool fails, Claude breaks into a cold sweat and shows a red bubble.
-- Subagents: when Claude makes a phone call, a subagent arrives by elevator (Explore wears green with a cap, Plan wears purple with glasses). When done, it reports to Claude, says "👋 Heading home!" and leaves by elevator. If it gets more work on the way to report, it goes back to work.
-- Floor directory on the left: one floor per project, one store per session. Floors with activity light up green; click a floor to ride the elevator there. When `/clear` starts a new session on the same floor, the view follows it. Click a store to pin that session.
-- Each floor shows its git state under the name: `⎇ branch · ●uncommitted · ↑ahead ↓behind`. Hover it for the last commit.
-- Same-file warning: when two sessions (or two subagents of one session) edit the same file within 10 minutes, the floor and stores get a ⚠, a toast names the other side, the Dev Room screens flash red and the characters involved shout about it.
-
-## Structure
-- `server/parse.ts`: turns one jsonl line into office events
-- `server/watcher.ts`: scans floors and stores (Claude and Codex), polls each floor's git state, and tails sessions (including subagents)
-- `server/parseCodex.ts`: the same for Codex rollout lines
-- `server/collisions.ts`: finds files edited by more than one session or subagent
-- `server/redact.ts`: masks secrets before text leaves the server
-- `server/bridge.ts`: SSE `/api/stream`, shared by the Vite plugin and the standalone server (`server/index.ts`)
-- `src/state/office.ts`: agent state machine (movement, poses, bubbles, subagent lifecycle)
-- `src/render/*`: isometric SVG building, characters, floor directory
-- `src/i18n.ts`: Korean/English strings and the language toggle
-
-Run `npm test` for the parser and state machine tests.
+- [Docs](docs/README.md): features, configuration, architecture, development
+- [Contributing](CONTRIBUTING.md)
+- [Security policy](SECURITY.md)
+- License: [MIT](LICENSE)
