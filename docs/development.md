@@ -23,7 +23,12 @@ Build log lines inline in the test from synthetic data. Never paste real session
 
 ## Screenshots
 
-The README screenshots are `docs/images/screenshot-light.png` and `screenshot-dark.png` (1920×1200). They were taken against **synthetic demo logs** with fake projects (`acme-web`, `acme-api`, `acme-docs`), by pointing `CLAUDE_PROJECTS_DIR` and `CODEX_HOME` at a throwaway folder. When you retake them, never capture your real sessions: the floor names, branches, session titles and file names would all end up in the public repo.
+The README media lives in `docs/images/`:
+
+- `demo-agents.gif`: about 27 s, 960 px wide, 12 fps, played at 1.5× speed. Claude spawns three subagents that work, report back and leave.
+- `state-*.jpg`: 640×400 crops of four states (thinking, a failed command, asking you, a same-file warning).
+
+All of it was recorded against **synthetic demo logs** with fake projects (`acme-web`, `acme-api`, `acme-docs`), by pointing `CLAUDE_PROJECTS_DIR` and `CODEX_HOME` at a throwaway folder. A script appended timed log lines while headless Chrome recorded the page through the DevTools screencast, and ffmpeg encoded the GIF. When you retake them, never capture your real sessions: the floor names, branches, session titles and file names would all end up in the public repo.
 
 ## Recipes
 
