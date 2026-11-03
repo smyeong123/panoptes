@@ -10,10 +10,7 @@ An isometric office that moves along with your Claude Code sessions.
 
 </div>
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/screenshot-dark.png">
-  <img src="docs/images/screenshot-light.png" alt="Panoptes showing a project floor: Claude editing code in the Dev Room, an Explore subagent reading in the Library, a todo list on the whiteboard, and the floor directory with git branch status">
-</picture>
+<img src="docs/images/demo-agents.gif" alt="Claude splits a task, phones three subagents who arrive by elevator, work in the Library and Server Room, report back and head home">
 
 Panoptes shows what your AI coding agents are doing as you work. It reads the session logs that Claude Code and Codex CLI write on your machine, then animates characters in a small isometric office to match.
 
@@ -22,6 +19,12 @@ Panoptes shows what your AI coding agents are doing as you work. It reads the se
 - **One floor per project.** Each floor shows that project's git branch and status, plus a store for each session.
 - **Same-file warnings.** You get an alert when two sessions edit the same file at the same time.
 - **Light and dark themes**, with Korean and English UI.
+
+| Thinking | A command failed |
+|:---:|:---:|
+| <img src="docs/images/state-thinking.jpg" width="400" alt="Claude thinking, with a cloud bubble"> | <img src="docs/images/state-error.jpg" width="400" alt="Claude in the Server Room with a red error bubble"> |
+| **Asking you a question** | **Two sessions editing the same file** |
+| <img src="docs/images/state-asking.jpg" width="400" alt="Claude at your desk asking which payment provider to use"> | <img src="docs/images/state-collision.jpg" width="400" alt="Clash warning over red Dev Room screens"> |
 
 ## Quick start
 
