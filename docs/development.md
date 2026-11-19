@@ -16,6 +16,8 @@ The tests use [Vitest](https://vitest.dev/) and run in Node with no browser. Run
 | `test/redact.test.ts` | Secret masking |
 | `test/git.test.ts` | `gitSnapshot` on a temporary repo (branch, uncommitted, ahead/behind) |
 | `test/figure.test.ts` | Character figure geometry |
+| `test/app.test.ts` | The HTTP server: health check, static files, paths outside the page folder, malformed URLs, idle exit |
+| `test/pluginBundle.test.ts` | That the committed `plugin/dist/` matches a fresh build, and that the built launcher starts, reuses and stops a server |
 
 Build log lines inline in the test from synthetic data. Never paste real session logs. They contain code, paths, prompts and sometimes secrets.
 
@@ -31,6 +33,10 @@ The README media lives in `docs/images/`:
 All of it was recorded against **synthetic demo logs** with fake projects (`acme-web`, `acme-api`, `acme-docs`), by pointing `CLAUDE_PROJECTS_DIR` and `CODEX_HOME` at a throwaway folder. A script appended timed log lines while headless Chrome recorded the page through the DevTools screencast, and ffmpeg encoded the GIF. When you retake them, never capture your real sessions: the floor names, branches, session titles and file names would all end up in the public repo.
 
 ## Recipes
+
+### Rebuild the plugin
+
+`plugin/dist/` is built output that is committed. After changing `server/`, `shared/`, `src/`, `index.html`, `public/` or `package.json`, run `npm run build:plugin` and commit the result with your change. `npm test` fails while it's stale. Details and the release steps are in [plugin.md](plugin.md).
 
 ### Send a new tool to a room
 

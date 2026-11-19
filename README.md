@@ -28,6 +28,15 @@ Panoptes shows what your AI coding agents are doing as you work. It reads the se
 
 ## Quick start
 
+As a Claude Code plugin (needs Node.js 20 or later):
+
+```
+/plugin install panoptes --marketplace smyeong123/panoptes
+/panoptes:open
+```
+
+Or from source:
+
 ```bash
 npm install
 npm run dev                  # http://127.0.0.1:5173
@@ -39,7 +48,7 @@ Panoptes runs entirely on your machine. It listens on 127.0.0.1 only and masks c
 
 ## More
 
-- [Docs](docs/README.md): features, configuration, architecture, development
+- [Docs](docs/README.md): features, the plugin, configuration, architecture, development
 - [Contributing](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)
 - License: [MIT](LICENSE)
