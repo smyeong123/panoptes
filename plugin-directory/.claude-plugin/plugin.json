@@ -1,0 +1,19 @@
+{
+  "name": "panoptes",
+  "version": "0.1.0",
+  "description": "Watch your Claude Code and Codex sessions as characters in an isometric office, in your browser. Needs the Panoptes command installed.",
+  "author": {
+    "name": "smyeong123",
+    "url": "https://github.com/smyeong123"
+  },
+  "homepage": "https://github.com/smyeong123/panoptes",
+  "repository": "https://github.com/smyeong123/panoptes",
+  "license": "MIT",
+  "keywords": [
+    "visualization",
+    "sessions",
+    "subagents",
+    "codex",
+    "dashboard"
+  ]
+}
