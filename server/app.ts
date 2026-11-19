@@ -5,6 +5,7 @@ import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import path from 'node:path';
 import { OfficeHub } from './bridge.ts';
+import { FORBIDDEN_HOST, isLocalHost } from './host.ts';
 import { VERSION } from './version.ts';
 
 export interface ServerOptions {
@@ -51,11 +52,18 @@ export function resolveStatic(webDir: string, urlPath: string): string | null {
 
 export function startServer(opts: ServerOptions): Promise<RunningServer> {
   const root = path.resolve(opts.webDir);
-  const hub = new OfficeHub();
+  // HOST를 이름으로 정해 띄웠다면 그 이름으로 들어오는 요청은 받는다
+  const allowedHosts = [opts.host];
+  const hub = new OfficeHub(allowedHosts);
   hub.start();
 
   const respond = (req: http.IncomingMessage, res: http.ServerResponse) => {
+    // 스트림의 Host는 허브가 확인한다. 나머지 경로는 여기서 막는다.
     if (hub.handle(req, res)) return;
+    if (!isLocalHost(req.headers.host, allowedHosts)) {
+      res.writeHead(403).end(FORBIDDEN_HOST);
+      return;
+    }
     const { pathname } = new URL(req.url ?? '/', 'http://localhost');
     if (pathname === '/api/health') {
       const health: Health = { app: 'panoptes', version: VERSION, pid: process.pid };

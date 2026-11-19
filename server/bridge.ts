@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Plugin } from 'vite';
 import type { Collision, OfficeEvent, ServerMessage } from '../shared/events.ts';
 import { CollisionTracker } from './collisions.ts';
+import { FORBIDDEN_HOST, isLocalHost } from './host.ts';
 import { FloorScanner, SessionTail, sessionFile } from './watcher.ts';
 
 interface Client {
@@ -18,6 +19,9 @@ export class OfficeHub {
   private collisions: Collision[] = [];
   private collisionsJson = '[]';
   private timers: NodeJS.Timeout[] = [];
+
+  /** @param allowedHosts IP와 localhost 말고도 받아 줄 Host 이름 (server/host.ts) */
+  constructor(private allowedHosts: readonly string[] = []) {}
 
   start() {
     this.scanner.start();
@@ -65,6 +69,11 @@ export class OfficeHub {
   handle(req: IncomingMessage, res: ServerResponse): boolean {
     const url = new URL(req.url ?? '/', 'http://localhost');
     if (url.pathname !== '/api/stream') return false;
+    // Vite의 Host 검사는 이 미들웨어보다 뒤에 돌아서 스트림을 막아 주지 않는다. 여기서 직접 본다.
+    if (!isLocalHost(req.headers.host, this.allowedHosts)) {
+      res.writeHead(403).end(FORBIDDEN_HOST);
+      return true;
+    }
     const session = url.searchParams.get('session') ?? undefined;
     if (session && !SessionTail.valid(session)) {
       res.writeHead(400).end('bad session');

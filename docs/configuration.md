@@ -13,6 +13,8 @@ Panoptes is configured with environment variables. All of them are optional.
 
 > **Warning:** binding to anything other than `127.0.0.1` lets anyone who can reach that address watch your session activity. See [SECURITY.md](../SECURITY.md).
 
+Open the page by IP address, as `localhost`, or by the exact `HOST` value. Any other hostname gets a 403, so if you bind to `0.0.0.0` and visit `http://mybox.local:4317`, use the machine's IP address instead or set `HOST=mybox.local`.
+
 ## Three ways to run
 
 | | Dev server | Standalone server | Plugin |
