@@ -570,6 +570,17 @@ function subagentKey(file, name) {
   return `agent:${name.replace(/^agent-/, "").replace(/\.jsonl$/, "")}`;
 }
 
+// server/host.ts
+import net from "node:net";
+var HOST_HEADER = /^(?:\[([0-9a-f:.]+)\]|([a-z0-9.-]+))(?::\d+)?$/i;
+var FORBIDDEN_HOST = "Forbidden host. Open Panoptes by IP address or as localhost.";
+function isLocalHost(header, extra = []) {
+  const match = header ? HOST_HEADER.exec(header) : null;
+  if (!match) return false;
+  const name = (match[1] ?? match[2]).toLowerCase();
+  return name === "localhost" || net.isIP(name) !== 0 || extra.some((host) => host.toLowerCase() === name);
+}
+
 // server/watcher.ts
 import fs3 from "node:fs";
 import os from "node:os";
@@ -1138,6 +1149,11 @@ var SessionTail = class {
 
 // server/bridge.ts
 var OfficeHub = class {
+  /** @param allowedHosts IP와 localhost 말고도 받아 줄 Host 이름 (server/host.ts) */
+  constructor(allowedHosts = []) {
+    this.allowedHosts = allowedHosts;
+  }
+  allowedHosts;
   clients = /* @__PURE__ */ new Set();
   tails = /* @__PURE__ */ new Map();
   scanner = new FloorScanner((floors) => this.broadcast({ t: "floors", floors }));
@@ -1187,6 +1203,10 @@ var OfficeHub = class {
   handle(req, res) {
     const url = new URL(req.url ?? "/", "http://localhost");
     if (url.pathname !== "/api/stream") return false;
+    if (!isLocalHost(req.headers.host, this.allowedHosts)) {
+      res.writeHead(403).end(FORBIDDEN_HOST);
+      return true;
+    }
     const session = url.searchParams.get("session") ?? void 0;
     if (session && !SessionTail.valid(session)) {
       res.writeHead(400).end("bad session");
@@ -1272,10 +1292,15 @@ function resolveStatic(webDir, urlPath) {
 }
 function startServer(opts) {
   const root = path3.resolve(opts.webDir);
-  const hub = new OfficeHub();
+  const allowedHosts = [opts.host];
+  const hub = new OfficeHub(allowedHosts);
   hub.start();
   const respond = (req, res) => {
     if (hub.handle(req, res)) return;
+    if (!isLocalHost(req.headers.host, allowedHosts)) {
+      res.writeHead(403).end(FORBIDDEN_HOST);
+      return;
+    }
     const { pathname } = new URL(req.url ?? "/", "http://localhost");
     if (pathname === "/api/health") {
       const health = { app: "panoptes", version: VERSION, pid: process.pid };

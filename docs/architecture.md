@@ -35,6 +35,7 @@ The event types shared by server and client are defined in `shared/events.ts`.
 | `server/collisions.ts` | Finds files edited by more than one session or subagent |
 | `server/git.ts` | `git status` / `git log -1` snapshot per project folder |
 | `server/bridge.ts` | `OfficeHub` and the SSE endpoint `/api/stream`. Shared by the Vite plugin and the standalone server |
+| `server/host.ts` | `isLocalHost`: the `Host` header check that blocks DNS rebinding |
 | `server/app.ts` | `startServer`: serves a folder of built files, the bridge and `/api/health`. Can exit when no page has been open for a while |
 | `server/index.ts` | Standalone entry (`npm start`): `startServer` on `dist/` |
 | `server/cli.ts` | Plugin launcher: `open`, `serve`, `stop`, `status`. See [plugin.md](plugin.md) |
@@ -60,6 +61,8 @@ The event types shared by server and client are defined in `shared/events.ts`.
 `GET /api/stream` opens an SSE stream. The server first sends the floor list and the current collisions.
 
 With `?session=<floor-dir>/<session-id>`, it also replays that session's events so far and then streams new ones. The parameter is validated by `SessionTail.valid` and is rejected if it contains `..`, `\` or `:`.
+
+The stream answers 403 unless the request's `Host` header is an IP address, `localhost`, or the configured `HOST` (`isLocalHost` in `server/host.ts`). The hub does this check itself, because in the dev server it runs before Vite's own host check. The standalone server applies the same check to every other path.
 
 ## Health check
 

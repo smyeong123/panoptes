@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -12,6 +13,17 @@ let running: import('../server/app.ts').RunningServer;
 let base: string;
 
 const get = (urlPath: string) => fetch(base + urlPath);
+
+/** fetch로는 Host 헤더를 바꿀 수 없어서 http로 직접 보낸다. 상태 코드만 받고 끊는다. */
+function statusFor(port: number, urlPath: string, host: string): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const req = http.get({ host: '127.0.0.1', port, path: urlPath, headers: { Host: host } }, (res) => {
+      resolve(res.statusCode ?? 0);
+      res.destroy();
+    });
+    req.on('error', reject);
+  });
+}
 
 beforeAll(async () => {
   process.env.CLAUDE_PROJECTS_DIR = path.join(root, 'projects');
@@ -56,6 +68,15 @@ describe('startServer', () => {
     expect((await get('/%E0%A4%A')).status).toBe(400);
     expect((await get('//')).status).toBe(400);
     expect((await get('/api/health')).status).toBe(200);
+  });
+
+  it('다른 도메인 이름으로 온 요청은 어느 경로든 403', async () => {
+    const foreign = `attacker.example:${running.port}`;
+    for (const urlPath of ['/api/stream', '/api/stream?session=a/b', '/api/health', '/', '/assets/app.js']) {
+      expect(await statusFor(running.port, urlPath, foreign), urlPath).toBe(403);
+    }
+    expect(await statusFor(running.port, '/api/stream', `localhost:${running.port}`)).toBe(200);
+    expect(await statusFor(running.port, '/api/health', `[::1]:${running.port}`)).toBe(200);
   });
 });
 

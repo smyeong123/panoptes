@@ -44,7 +44,7 @@ Set these in the environment Claude Code starts from. All of them are optional.
 | Variable | Default | What it does |
 |---|---|---|
 | `PANOPTES_PORT` | `4317` | Port the plugin's server uses |
-| `PANOPTES_HOST` | `127.0.0.1` | Address it binds to |
+| `PANOPTES_HOST` | `127.0.0.1` | Address it binds to. The page then answers to that value, to any IP address and to `localhost`, and refuses other hostnames |
 | `PANOPTES_IDLE_MINUTES` | `30` | Minutes with no page open before the server stops. `0` keeps it running |
 | `CLAUDE_PROJECTS_DIR`, `CODEX_HOME` | see [configuration.md](configuration.md) | Log folders to read |
 

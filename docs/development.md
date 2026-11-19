@@ -16,7 +16,8 @@ The tests use [Vitest](https://vitest.dev/) and run in Node with no browser. Run
 | `test/redact.test.ts` | Secret masking |
 | `test/git.test.ts` | `gitSnapshot` on a temporary repo (branch, uncommitted, ahead/behind) |
 | `test/figure.test.ts` | Character figure geometry |
-| `test/app.test.ts` | The HTTP server: health check, static files, paths outside the page folder, malformed URLs, idle exit |
+| `test/app.test.ts` | The HTTP server: health check, static files, paths outside the page folder, malformed URLs, foreign `Host` headers, idle exit |
+| `test/host.test.ts` | Which `Host` headers count as local |
 | `test/pluginBundle.test.ts` | That the committed `plugin/dist/` matches a fresh build, and that the built launcher starts, reuses and stops a server |
 
 Build log lines inline in the test from synthetic data. Never paste real session logs. They contain code, paths, prompts and sometimes secrets.
