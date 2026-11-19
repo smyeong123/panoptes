@@ -17,15 +17,31 @@ export class OfficeHub {
   private tracker = new CollisionTracker(sessionFile);
   private collisions: Collision[] = [];
   private collisionsJson = '[]';
+  private timers: NodeJS.Timeout[] = [];
 
   start() {
     this.scanner.start();
-    // 창에서 벗어난 충돌도 사라져야 하므로 파일 변화와 상관없이 매초 다시 계산한다
-    setInterval(() => this.checkCollisions(), 1000).unref();
-    // 프록시가 연결을 끊지 않게 주기적으로 주석을 흘린다
-    setInterval(() => {
-      for (const c of this.clients) c.res.write(': ping\n\n');
-    }, 15000).unref();
+    this.timers = [
+      // 창에서 벗어난 충돌도 사라져야 하므로 파일 변화와 상관없이 매초 다시 계산한다
+      setInterval(() => this.checkCollisions(), 1000).unref(),
+      // 프록시가 연결을 끊지 않게 주기적으로 주석을 흘린다
+      setInterval(() => {
+        for (const c of this.clients) c.res.write(': ping\n\n');
+      }, 15000).unref(),
+    ];
+  }
+
+  stop() {
+    this.scanner.stop();
+    for (const t of this.timers) clearInterval(t);
+    this.timers = [];
+    for (const tail of this.tails.values()) tail.stop();
+    this.tails.clear();
+  }
+
+  /** 지금 스트림을 열어 둔 페이지 수. 아무도 없으면 서버가 스스로 끝낼 수 있다. */
+  get clientCount(): number {
+    return this.clients.size;
   }
 
   private checkCollisions() {

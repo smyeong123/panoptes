@@ -9,20 +9,21 @@ Panoptes is configured with environment variables. All of them are optional.
 | `HOST` | `127.0.0.1` | Address the standalone server binds to |
 | `PORT` | `4317` | Port of the standalone server |
 
-`HOST` and `PORT` apply only to the standalone server. The dev server is fixed to `127.0.0.1:5173` in `vite.config.ts`.
+`HOST` and `PORT` apply only to the standalone server. The dev server is fixed to `127.0.0.1:5173` in `vite.config.ts`. The plugin ignores both and reads `PANOPTES_HOST`, `PANOPTES_PORT` and `PANOPTES_IDLE_MINUTES` instead. See [plugin.md](plugin.md#configuration).
 
 > **Warning:** binding to anything other than `127.0.0.1` lets anyone who can reach that address watch your session activity. See [SECURITY.md](../SECURITY.md).
 
-## Two ways to run
+## Three ways to run
 
-| | Dev server | Standalone server |
-|---|---|---|
-| Command | `npm run dev` | `npm run build && npm start` |
-| Address | http://127.0.0.1:5173 | http://127.0.0.1:4317 |
-| Serves | Vite with hot reload | the built `dist/` (`server/index.ts`) |
-| Use it for | working on Panoptes | just running it |
+| | Dev server | Standalone server | Plugin |
+|---|---|---|---|
+| Command | `npm run dev` | `npm run build && npm start` | `/panoptes:open` in Claude Code |
+| Address | http://127.0.0.1:5173 | http://127.0.0.1:4317 | http://127.0.0.1:4317 |
+| Serves | Vite with hot reload | the built `dist/` (`server/index.ts`) | the committed `plugin/dist/` (`server/cli.ts`) |
+| Runs | in your terminal | in your terminal | in the background, until idle for 30 minutes |
+| Use it for | working on Panoptes | running it from a clone | running it without a clone |
 
-Both use the same bridge (`server/bridge.ts`), so the stream they serve is identical. The dev server mounts it as a Vite plugin (`officeBridge()` in `vite.config.ts`).
+All three use the same bridge (`server/bridge.ts`), so the stream they serve is identical. The dev server mounts it as a Vite plugin (`officeBridge()` in `vite.config.ts`). The standalone server and the plugin share one HTTP server (`server/app.ts`).
 
 Examples:
 

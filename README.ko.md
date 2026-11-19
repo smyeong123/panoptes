@@ -28,6 +28,15 @@ Panoptes는 AI 코딩 에이전트가 지금 무엇을 하는지 보여 줍니�
 
 ## 시작하기
 
+Claude Code 플러그인으로 (Node.js 20 이상 필요):
+
+```
+/plugin install panoptes --marketplace smyeong123/panoptes
+/panoptes:open
+```
+
+또는 소스에서 바로:
+
 ```bash
 npm install
 npm run dev                  # http://127.0.0.1:5173
@@ -39,7 +48,7 @@ Panoptes는 내 컴퓨터 안에서만 돕니다. 127.0.0.1에만 열리고, 흔
 
 ## 더 보기
 
-- [문서](docs/README.md) (영문): 기능, 설정, 구조, 개발
+- [문서](docs/README.md) (영문): 기능, 플러그인, 설정, 구조, 개발
 - [기여 안내](CONTRIBUTING.md) (영문)
 - [보안 정책](SECURITY.md) (영문)
 - 라이선스: [MIT](LICENSE)

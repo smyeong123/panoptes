@@ -16,6 +16,7 @@ npm run dev        # Vite dev server with the live bridge, http://127.0.0.1:5173
 | `npm run dev` | Dev server with hot reload |
 | `npm run build` | Type-checks, then builds `dist/` |
 | `npm start` | Serves `dist/` with the standalone server, http://127.0.0.1:4317 |
+| `npm run build:plugin` | Rebuilds `plugin/dist/`, the committed build the Claude Code plugin runs |
 | `npm test` | Runs the Vitest suite |
 | `npm run typecheck` | Type-checks only |
 
@@ -38,6 +39,7 @@ For how the code fits together, start with [docs/architecture.md](docs/architect
 - **Tests.** Changes to the parsers (`server/parse.ts`, `server/parseCodex.ts`), the redaction layer, or the state machine (`src/state/office.ts`) need tests in `test/`.
 - **Docs.** Technical notes belong in [`docs/`](docs/README.md). When you change behaviour, configuration or architecture, update the matching doc in the same PR. Keep the README short: it only says what Panoptes is and how to start it.
 - **UI text.** All user-visible strings go through `src/i18n.ts`, with both a `ko` and an `en` entry.
+- **Plugin build.** If you change `server/`, `shared/`, `src/`, `index.html`, `public/` or `package.json`, run `npm run build:plugin` and commit `plugin/dist/` with your change. `npm test` fails while it's stale. See [docs/plugin.md](docs/plugin.md).
 - **No real session logs.** Never commit real `.jsonl` logs, even trimmed ones. They can contain code, paths, prompts and secrets. Test fixtures must be synthetic.
 - **Style.** Match the code around you. Run `npm run typecheck` before pushing.
 

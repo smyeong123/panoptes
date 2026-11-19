@@ -1,0 +1,2 @@
+# Built by npm run build:plugin. Keep the bytes exactly as built.
+plugin/dist/** -text linguist-generated

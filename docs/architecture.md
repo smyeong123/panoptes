@@ -35,7 +35,12 @@ The event types shared by server and client are defined in `shared/events.ts`.
 | `server/collisions.ts` | Finds files edited by more than one session or subagent |
 | `server/git.ts` | `git status` / `git log -1` snapshot per project folder |
 | `server/bridge.ts` | `OfficeHub` and the SSE endpoint `/api/stream`. Shared by the Vite plugin and the standalone server |
-| `server/index.ts` | Standalone server: serves `dist/` and the bridge |
+| `server/app.ts` | `startServer`: serves a folder of built files, the bridge and `/api/health`. Can exit when no page has been open for a while |
+| `server/index.ts` | Standalone entry (`npm start`): `startServer` on `dist/` |
+| `server/cli.ts` | Plugin launcher: `open`, `serve`, `stop`, `status`. See [plugin.md](plugin.md) |
+| `server/version.ts` | The version from `package.json` |
+| `scripts/build-plugin.mjs` | Builds `plugin/dist/`: the page, plus `server/cli.ts` bundled into one file |
+| `plugin/` | The Claude Code plugin: manifest, skills and the committed build |
 | `shared/events.ts` | Event and message types shared by server and client |
 | `shared/rooms.ts` | Tool name → room mapping |
 | `src/state/office.ts` | Agent state machine: movement, poses, bubbles, subagent lifecycle |
@@ -55,6 +60,10 @@ The event types shared by server and client are defined in `shared/events.ts`.
 `GET /api/stream` opens an SSE stream. The server first sends the floor list and the current collisions.
 
 With `?session=<floor-dir>/<session-id>`, it also replays that session's events so far and then streams new ones. The parameter is validated by `SessionTail.valid` and is rejected if it contains `..`, `\` or `:`.
+
+## Health check
+
+`GET /api/health` on the standalone server and the plugin returns `{ "app": "panoptes", "version": "…", "pid": … }`. The plugin launcher uses it to tell a running Panoptes from another program on the same port, to replace a server from an older version, and to find the process to stop. The dev server doesn't have it.
 
 ## Codex hand-off linking
 

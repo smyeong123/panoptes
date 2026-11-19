@@ -1,0 +1,17 @@
+{
+  "name": "smyeong123",
+  "owner": {
+    "name": "smyeong123",
+    "url": "https://github.com/smyeong123"
+  },
+  "metadata": {
+    "description": "Panoptes: an isometric office that moves along with your Claude Code sessions."
+  },
+  "plugins": [
+    {
+      "name": "panoptes",
+      "source": "./plugin",
+      "description": "Watch your Claude Code and Codex sessions as characters in an isometric office, in your browser."
+    }
+  ]
+}
