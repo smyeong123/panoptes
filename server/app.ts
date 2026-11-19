@@ -45,7 +45,8 @@ const TYPES: Record<string, string> = {
 export function resolveStatic(webDir: string, urlPath: string): string | null {
   const root = path.resolve(webDir);
   const file = path.join(root, urlPath === '/' ? 'index.html' : urlPath);
-  return file.startsWith(root) ? file : null;
+  // startsWith(root)만 보면 이름이 같은 글자로 시작하는 옆 폴더(dist-old 등)가 통과한다
+  return file === root || file.startsWith(root + path.sep) ? file : null;
 }
 
 export function startServer(opts: ServerOptions): Promise<RunningServer> {
@@ -74,7 +75,15 @@ export function startServer(opts: ServerOptions): Promise<RunningServer> {
     fs.createReadStream(file).pipe(res);
   };
 
-  const server = http.createServer(respond);
+  const server = http.createServer((req, res) => {
+    try {
+      respond(req, res);
+    } catch {
+      // 깨진 % 인코딩이나 '//' 같은 주소는 URL 해석에서 예외를 던진다. 요청 하나로 서버가 죽으면 안 된다.
+      if (!res.headersSent) res.writeHead(400);
+      res.end('bad request');
+    }
+  });
 
   let idleTimer: NodeJS.Timeout | undefined;
   if (opts.idleExitMs) {

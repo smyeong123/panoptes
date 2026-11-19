@@ -19,6 +19,9 @@ beforeAll(async () => {
   fs.mkdirSync(path.join(webDir, 'assets'), { recursive: true });
   fs.writeFileSync(path.join(webDir, 'index.html'), '<title>index</title>');
   fs.writeFileSync(path.join(webDir, 'assets', 'app.js'), 'console.log(1)');
+  // webDir와 같은 글자로 시작하는 옆 폴더
+  fs.mkdirSync(path.join(root, 'web-private'));
+  fs.writeFileSync(path.join(root, 'web-private', 'secret.txt'), 'secret');
   app = await import('../server/app.ts');
   running = await app.startServer({ host: '127.0.0.1', port: 0, webDir });
   base = `http://127.0.0.1:${running.port}`;
@@ -42,6 +45,26 @@ describe('startServer', () => {
     expect(await js.text()).toBe('console.log(1)');
     expect(await (await get('/')).text()).toBe('<title>index</title>');
     expect(await (await get('/no/such/page')).text()).toBe('<title>index</title>');
+  });
+
+  it('webDir 밖의 파일은 주지 않는다', async () => {
+    expect(await (await get('/..%2fweb-private%2fsecret.txt')).text()).toBe('<title>index</title>');
+    expect(await (await get('/..%2f..%2fweb-private%2fsecret.txt')).text()).toBe('<title>index</title>');
+  });
+
+  it('해석할 수 없는 주소는 400으로 답하고 계속 돈다', async () => {
+    expect((await get('/%E0%A4%A')).status).toBe(400);
+    expect((await get('//')).status).toBe(400);
+    expect((await get('/api/health')).status).toBe(200);
+  });
+});
+
+describe('resolveStatic', () => {
+  it('폴더 안이면 경로를, 밖이면 null을 돌려준다', () => {
+    expect(app.resolveStatic(webDir, '/')).toBe(path.join(webDir, 'index.html'));
+    expect(app.resolveStatic(webDir, '/assets/app.js')).toBe(path.join(webDir, 'assets', 'app.js'));
+    expect(app.resolveStatic(webDir, '/../web-private/secret.txt')).toBeNull();
+    expect(app.resolveStatic(webDir, '/../../etc/passwd')).toBeNull();
   });
 });
 
