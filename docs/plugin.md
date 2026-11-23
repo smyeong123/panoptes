@@ -2,6 +2,15 @@
 
 Panoptes ships as a Claude Code plugin, so you can start it from a session without cloning the repo. The plugin is a launcher: it starts the same local server as `npm start` and opens the same page in your browser.
 
+There are two editions with the same two commands:
+
+| Edition | Folder | Where it's listed | Holds the program? |
+|---|---|---|---|
+| Self-contained | `plugin/` | this repo's own marketplace | Yes. Nothing else to install |
+| Directory | `plugin-directory/` | the official plugin directory | No. It runs the `panoptes` command, which you install from npm |
+
+Install one or the other. This page describes the self-contained edition first. The [directory edition](#directory-edition) and the [`panoptes` command](#the-panoptes-command) have their own sections.
+
 ## Install
 
 You need Node.js 20 or later on your PATH.
@@ -65,6 +74,30 @@ The repo root is the marketplace, and `plugin/` is the plugin.
 | `plugin/dist/panoptes.mjs` | Built. The server and the launcher (`server/cli.ts`) in one file with no dependencies |
 | `plugin/dist/web/` | Built. The page |
 
+## The `panoptes` command
+
+The launcher is also published to npm as `panoptes-office`, which installs a `panoptes` command:
+
+```bash
+npm install -g panoptes-office
+panoptes open        # same as /panoptes:open
+panoptes stop
+panoptes status
+panoptes --version
+```
+
+It is the same file the self-contained plugin runs (`plugin/dist/panoptes.mjs`), so everything under [How it runs](#how-it-runs) and [Configuration](#configuration) applies to it. The package holds only `plugin/dist/` and has no dependencies.
+
+## Directory edition
+
+The official plugin directory accepts code files, and pre-approved tools beyond Read, Grep, Glob and LS, only from Verified organizations. `plugin-directory/` is an edition that meets those rules: it holds only Markdown, JSON and the icon.
+
+- Its skills run `panoptes open` and `panoptes stop`, so the [`panoptes` command](#the-panoptes-command) has to be installed first. If it isn't, the skill says so and links to the install steps. It never installs anything itself.
+- It pre-approves no tools, so Claude Code asks before each run.
+- Keep it free of code, `allowed-tools`, `${...}` paths and package-manager command lines, or the directory will refuse it. Install steps belong in the main README, which the skills link to.
+
+`npm run build:plugin` copies the version into its `plugin.json` too.
+
 ## Building
 
 Installing a plugin copies the repo and runs no build, so `plugin/dist/` is committed.
@@ -80,7 +113,7 @@ Don't edit `plugin/dist/` by hand.
 ## Releasing
 
 1. Bump `version` in `package.json`. Claude Code uses the plugin version to decide whether an installed copy is out of date, so bump it for every release.
-2. Run `npm run build:plugin`. It rebuilds `plugin/dist/` and copies the version into `plugin/.claude-plugin/plugin.json`.
+2. Run `npm run build:plugin`. It rebuilds `plugin/dist/` and copies the version into the `plugin.json` of both editions.
 3. Run `npm test && npm run build`, then check the manifests:
 
    ```bash
@@ -94,10 +127,16 @@ Don't edit `plugin/dist/` by hand.
    claude plugin tag plugin --push    # creates panoptes--v<version>
    ```
 
-Users get the new version with `claude plugin update panoptes@smyeong123`.
+5. Publish the command to npm from the same commit. `prepublishOnly` runs the tests first, which include the stale-build check:
+
+   ```bash
+   npm publish
+   ```
+
+Users of the self-contained edition get the new version with `claude plugin update panoptes@smyeong123`, and users of the command with `npm install -g panoptes-office@latest`.
 
 ## Listing in the plugin directory
 
-Plugins are submitted at [claude.ai/directory/manage](https://claude.ai/directory/manage). The `--profile directory` check above covers part of what the directory checks. The directory also runs its own safety scan and policy review.
+Plugins are submitted at [claude.ai/directory/manage](https://claude.ai/directory/manage), with `plugin-directory` as the plugin path. Submit the [directory edition](#directory-edition), not `plugin/`: the directory refuses the bundled program from an organization that isn't Verified. Check it first with `claude plugin validate plugin-directory --strict --profile directory`. That covers part of what the directory checks, and the directory also runs its own safety scan and policy review.
 
-The icon can only be set once, the first time the plugin is saved or submitted there. Check `plugin/.claude-plugin/icon.png` before you submit.
+The icon can only be set once, the first time the plugin is saved or submitted there. Check `plugin-directory/.claude-plugin/icon.png` before you submit.

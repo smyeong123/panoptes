@@ -59,10 +59,35 @@ describe('plugin/dist', () => {
     expect(stale, 'plugin/dist is stale. Run: npm run build:plugin').toEqual([]);
   }, 60_000);
 
-  it('plugin.json 버전이 package.json과 같다', () => {
-    const manifest = JSON.parse(fs.readFileSync(path.join(repo, 'plugin', '.claude-plugin', 'plugin.json'), 'utf8'));
-    expect(manifest.version).toBe(pkg.version);
+  it('두 플러그인의 plugin.json 버전이 package.json과 같다', () => {
+    for (const folder of ['plugin', 'plugin-directory']) {
+      const manifest = JSON.parse(fs.readFileSync(path.join(repo, folder, '.claude-plugin', 'plugin.json'), 'utf8'));
+      expect(manifest.version, folder).toBe(pkg.version);
+    }
   });
+});
+
+describe('npm 패키지', () => {
+  it('panoptes 명령이 실행 가능한 번들을 가리킨다', () => {
+    expect(pkg.bin).toEqual({ panoptes: 'plugin/dist/panoptes.mjs' });
+    const head = fs.readFileSync(path.join(repo, pkg.bin.panoptes), 'utf8').split('\n', 1)[0];
+    expect(head).toBe('#!/usr/bin/env node');
+  });
+
+  it('빌드 결과물과 안내 문서만 담는다', () => {
+    const out = execFileSync(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['pack', '--dry-run', '--json', '--ignore-scripts'], {
+      cwd: repo,
+      env: cleanEnv(),
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    const [{ files }] = JSON.parse(out) as [{ files: { path: string }[] }];
+    const packed = files.map((f) => f.path).sort();
+    const extra = packed.filter((f) => !f.startsWith('plugin/dist/') && !['LICENSE', 'README.md', 'README.ko.md', 'package.json'].includes(f));
+    expect(extra).toEqual([]);
+    expect(packed).toContain('plugin/dist/panoptes.mjs');
+    expect(packed).toContain('plugin/dist/web/index.html');
+  }, 30_000);
 });
 
 describe('런처 (plugin/dist/panoptes.mjs)', () => {

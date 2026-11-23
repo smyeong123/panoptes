@@ -31,17 +31,21 @@ await bundle({
   platform: 'node',
   format: 'esm',
   target: 'node20',
+  // npm이 이 파일을 panoptes 명령으로 연결한다 (package.json의 bin)
+  banner: { js: '#!/usr/bin/env node' },
   logLevel: 'warning',
 });
 
 if (!custom) {
   // 버전은 package.json 한 곳에서만 올린다
   const { version } = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-  const manifestPath = path.join(root, 'plugin', '.claude-plugin', 'plugin.json');
-  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-  if (manifest.version !== version) {
-    manifest.version = version;
-    fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+  for (const folder of ['plugin', 'plugin-directory']) {
+    const manifestPath = path.join(root, folder, '.claude-plugin', 'plugin.json');
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    if (manifest.version !== version) {
+      manifest.version = version;
+      fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+    }
   }
   console.log(`plugin/dist built for panoptes ${version}`);
 }

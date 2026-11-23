@@ -25,6 +25,8 @@ Open the page by IP address, as `localhost`, or by the exact `HOST` value. Any o
 | Runs | in your terminal | in your terminal | in the background, until idle for 30 minutes |
 | Use it for | working on Panoptes | running it from a clone | running it without a clone |
 
+The `panoptes` command from npm is the plugin's launcher under another name, so the Plugin column applies to it as well: `panoptes open` does what `/panoptes:open` does.
+
 All three use the same bridge (`server/bridge.ts`), so the stream they serve is identical. The dev server mounts it as a Vite plugin (`officeBridge()` in `vite.config.ts`). The standalone server and the plugin share one HTTP server (`server/app.ts`).
 
 Examples:
