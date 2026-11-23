@@ -1,4 +1,5 @@
-// 플러그인 런처. scripts/build-plugin.mjs가 서버와 함께 plugin/dist/panoptes.mjs 한 파일로 묶는다.
+// 런처. scripts/build-plugin.mjs가 서버와 함께 plugin/dist/panoptes.mjs 한 파일로 묶는다.
+// 플러그인은 이 파일을 node로 부르고, npm 패키지는 panoptes 명령으로 연결한다.
 //   open    서버가 없으면 백그라운드로 띄우고 브라우저를 연다 (기본)
 //   serve   서버를 이 프로세스에서 돌린다. open이 따로 띄우는 것이 이것이다
 //   stop    돌고 있는 서버를 끝낸다
@@ -140,8 +141,18 @@ async function status() {
   );
 }
 
+const USAGE = 'Usage: panoptes [open [--no-open] | serve | stop | status | --version]';
+
 const [command = 'open', ...flags] = process.argv.slice(2);
 switch (command) {
+  case '--version':
+  case '-v':
+    console.log(VERSION);
+    break;
+  case '--help':
+  case '-h':
+    console.log(USAGE);
+    break;
   case 'open':
     await open(!flags.includes('--no-open'));
     break;
@@ -155,5 +166,5 @@ switch (command) {
     await status();
     break;
   default:
-    fail('Usage: panoptes.mjs [open [--no-open] | serve | stop | status]');
+    fail(USAGE);
 }

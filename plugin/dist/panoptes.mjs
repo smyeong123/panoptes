@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 // server/cli.ts
 import { spawn } from "node:child_process";
 import path4 from "node:path";
@@ -1248,19 +1250,45 @@ var OfficeHub = class {
 
 // package.json
 var package_default = {
-  name: "panoptes",
-  private: true,
-  version: "0.1.0",
+  name: "panoptes-office",
+  version: "0.2.0",
+  description: "An isometric office that moves along with your Claude Code sessions.",
+  keywords: [
+    "claude-code",
+    "codex",
+    "visualization",
+    "sessions",
+    "subagents",
+    "dashboard"
+  ],
   license: "MIT",
+  author: "smyeong123",
+  homepage: "https://github.com/smyeong123/panoptes#readme",
+  repository: {
+    type: "git",
+    url: "git+https://github.com/smyeong123/panoptes.git"
+  },
+  bugs: {
+    url: "https://github.com/smyeong123/panoptes/issues"
+  },
   type: "module",
-  description: "Claude Code \uC138\uC158 \uAE30\uB85D\uC744 \uB530\uB77C \uC6C0\uC9C1\uC774\uB294 \uC544\uC774\uC18C\uBA54\uD2B8\uB9AD \uC0AC\uBB34\uC2E4",
+  engines: {
+    node: ">=20"
+  },
+  bin: {
+    panoptes: "plugin/dist/panoptes.mjs"
+  },
+  files: [
+    "plugin/dist"
+  ],
   scripts: {
     dev: "vite",
     build: "tsc --noEmit && vite build",
     "build:plugin": "node scripts/build-plugin.mjs",
     start: "tsx server/index.ts",
     test: "vitest run",
-    typecheck: "tsc --noEmit"
+    typecheck: "tsc --noEmit",
+    prepublishOnly: "npm test"
   },
   devDependencies: {
     "@types/node": "^22.10.0",
@@ -1471,8 +1499,17 @@ async function status() {
     now.state === "panoptes" ? `Panoptes ${now.health.version} is running at ${BASE}` : `Panoptes is not running at ${BASE}.`
   );
 }
+var USAGE = "Usage: panoptes [open [--no-open] | serve | stop | status | --version]";
 var [command = "open", ...flags] = process.argv.slice(2);
 switch (command) {
+  case "--version":
+  case "-v":
+    console.log(VERSION);
+    break;
+  case "--help":
+  case "-h":
+    console.log(USAGE);
+    break;
   case "open":
     await open(!flags.includes("--no-open"));
     break;
@@ -1486,5 +1523,5 @@ switch (command) {
     await status();
     break;
   default:
-    fail("Usage: panoptes.mjs [open [--no-open] | serve | stop | status]");
+    fail(USAGE);
 }

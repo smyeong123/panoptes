@@ -1,17 +1,43 @@
 {
-  "name": "panoptes",
-  "private": true,
-  "version": "0.1.0",
+  "name": "panoptes-office",
+  "version": "0.2.0",
+  "description": "An isometric office that moves along with your Claude Code sessions.",
+  "keywords": [
+    "claude-code",
+    "codex",
+    "visualization",
+    "sessions",
+    "subagents",
+    "dashboard"
+  ],
   "license": "MIT",
+  "author": "smyeong123",
+  "homepage": "https://github.com/smyeong123/panoptes#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/smyeong123/panoptes.git"
+  },
+  "bugs": {
+    "url": "https://github.com/smyeong123/panoptes/issues"
+  },
   "type": "module",
-  "description": "Claude Code 세션 기록을 따라 움직이는 아이소메트릭 사무실",
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "panoptes": "plugin/dist/panoptes.mjs"
+  },
+  "files": [
+    "plugin/dist"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "build:plugin": "node scripts/build-plugin.mjs",
     "start": "tsx server/index.ts",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm test"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
