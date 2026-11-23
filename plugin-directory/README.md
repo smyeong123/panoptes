@@ -20,3 +20,7 @@ Both commands run only when you type them, and Claude Code asks before each one 
 ## What it touches
 
 Panoptes reads the session logs that Claude Code and Codex CLI write on your machine, listens on 127.0.0.1 only, and makes no outbound network calls. Details are in [SECURITY.md](https://github.com/smyeong123/panoptes/blob/main/SECURITY.md).
+
+## Privacy
+
+Panoptes runs on your computer and its author collects nothing. See the [Privacy](https://github.com/smyeong123/panoptes/blob/main/PRIVACY.md) policy.

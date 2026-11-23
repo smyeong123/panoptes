@@ -61,4 +61,5 @@ Panoptes runs entirely on your machine. It listens on 127.0.0.1 only and masks c
 - [Docs](docs/README.md): features, the plugin, configuration, architecture, development
 - [Contributing](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)
+- [Privacy](PRIVACY.md)
 - License: [MIT](LICENSE)

@@ -68,7 +68,7 @@ The repo root is the marketplace, and `plugin/` is the plugin.
 | Path | Role |
 |---|---|
 | `.claude-plugin/marketplace.json` | Marketplace `smyeong123` with one entry, `panoptes`, pointing at `./plugin` |
-| `plugin/.claude-plugin/plugin.json` | Plugin manifest. Its `version` is copied from `package.json` by the build |
+| `plugin/.claude-plugin/plugin.json` | Plugin manifest. Its `version` is copied from `package.json` by the build, and `privacyPolicyUrl` points at [PRIVACY.md](../PRIVACY.md) |
 | `plugin/.claude-plugin/icon.png` | Listing icon |
 | `plugin/skills/open`, `plugin/skills/stop` | The two commands. Each runs one fixed launcher command |
 | `plugin/dist/panoptes.mjs` | Built. The server and the launcher (`server/cli.ts`) in one file with no dependencies |
@@ -138,5 +138,7 @@ Users of the self-contained edition get the new version with `claude plugin upda
 ## Listing in the plugin directory
 
 Plugins are submitted at [claude.ai/directory/manage](https://claude.ai/directory/manage), with `plugin-directory` as the plugin path. Submit the [directory edition](#directory-edition), not `plugin/`: the directory refuses the bundled program from an organization that isn't Verified. Check it first with `claude plugin validate plugin-directory --strict --profile directory`. That covers part of what the directory checks, and the directory also runs its own safety scan and policy review.
+
+The directory asks how the plugin handles data. The answers that match [PRIVACY.md](../PRIVACY.md) are: it reads personal data but doesn't store it (session logs can contain anything you typed), it sends nothing to other services, nothing is retained, and it isn't intended for users under 18. Both plugin manifests carry `privacyPolicyUrl`, which the directory looks for when a plugin reads personal data. If you change what Panoptes reads, stores or sends, update PRIVACY.md and SECURITY.md in the same change.
 
 The icon can only be set once, the first time the plugin is saved or submitted there. Check `plugin-directory/.claude-plugin/icon.png` before you submit.

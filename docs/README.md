@@ -10,6 +10,6 @@ Technical notes for people running, changing or contributing to Panoptes. The to
 | [architecture.md](architecture.md) | understand how a log line becomes a moving character |
 | [development.md](development.md) | find the tests, or add a tool mapping, a UI string or a redaction pattern |
 
-See also [CONTRIBUTING.md](../CONTRIBUTING.md) and [SECURITY.md](../SECURITY.md).
+See also [CONTRIBUTING.md](../CONTRIBUTING.md), [SECURITY.md](../SECURITY.md) and [PRIVACY.md](../PRIVACY.md).
 
 When you change behaviour, configuration or architecture, update the matching doc in the same PR.
