@@ -8,6 +8,7 @@
   },
   "homepage": "https://github.com/smyeong123/panoptes",
   "repository": "https://github.com/smyeong123/panoptes",
+  "privacyPolicyUrl": "https://github.com/smyeong123/panoptes/blob/main/PRIVACY.md",
   "license": "MIT",
   "keywords": [
     "visualization",

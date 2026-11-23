@@ -61,4 +61,5 @@ Panoptes는 내 컴퓨터 안에서만 돕니다. 127.0.0.1에만 열리고, 흔
 - [문서](docs/README.md) (영문): 기능, 플러그인, 설정, 구조, 개발
 - [기여 안내](CONTRIBUTING.md) (영문)
 - [보안 정책](SECURITY.md) (영문)
+- [개인정보 처리](PRIVACY.md) (영문)
 - 라이선스: [MIT](LICENSE)

@@ -21,6 +21,10 @@ Panoptes needs Node.js 20 or later on your PATH. It keeps running in the backgro
 
 Panoptes reads the session logs that Claude Code and Codex CLI write on your machine, listens on 127.0.0.1 only, and makes no outbound network calls. Details are in [SECURITY.md](https://github.com/smyeong123/panoptes/blob/main/SECURITY.md) and [docs/plugin.md](https://github.com/smyeong123/panoptes/blob/main/docs/plugin.md).
 
+## Privacy
+
+Panoptes runs on your computer and its author collects nothing. See the [Privacy](https://github.com/smyeong123/panoptes/blob/main/PRIVACY.md) policy.
+
 ## About `dist/`
 
 `dist/` is built from the TypeScript sources in the repository by `npm run build:plugin`. It's committed because installing a plugin doesn't run a build. Don't edit it by hand.
