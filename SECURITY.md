@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-Security fixes go to the latest `main` branch only. The Claude Code plugin is built from `main`, so update the plugin to get them.
+Security fixes go to the latest `main` branch only. The Claude Code plugin and the `panoptes-office` npm package are built from `main`, so update whichever you use to get them.
 
 ## Reporting a vulnerability
 

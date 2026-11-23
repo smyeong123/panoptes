@@ -35,7 +35,17 @@ Claude Code 플러그인으로 (Node.js 20 이상 필요):
 /panoptes:open
 ```
 
-또는 소스에서 바로:
+### 명령으로 설치하기
+
+Claude Code 없이 쓰거나 플러그인 디렉터리의 플러그인을 쓰려면 `panoptes` 명령을 설치합니다 (Node.js 20 이상).
+
+```bash
+npm install -g panoptes-office
+panoptes open    # http://127.0.0.1:4317
+panoptes stop
+```
+
+### 소스에서 실행하기
 
 ```bash
 npm install

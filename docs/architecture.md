@@ -41,7 +41,8 @@ The event types shared by server and client are defined in `shared/events.ts`.
 | `server/cli.ts` | Plugin launcher: `open`, `serve`, `stop`, `status`. See [plugin.md](plugin.md) |
 | `server/version.ts` | The version from `package.json` |
 | `scripts/build-plugin.mjs` | Builds `plugin/dist/`: the page, plus `server/cli.ts` bundled into one file |
-| `plugin/` | The Claude Code plugin: manifest, skills and the committed build |
+| `plugin/` | The self-contained Claude Code plugin: manifest, skills and the committed build. `plugin/dist/panoptes.mjs` is also the npm package's `panoptes` command |
+| `plugin-directory/` | The code-free edition for the official plugin directory. Its skills run the `panoptes` command. See [plugin.md](plugin.md#directory-edition) |
 | `shared/events.ts` | Event and message types shared by server and client |
 | `shared/rooms.ts` | Tool name → room mapping |
 | `src/state/office.ts` | Agent state machine: movement, poses, bubbles, subagent lifecycle |

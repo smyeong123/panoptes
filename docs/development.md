@@ -18,7 +18,7 @@ The tests use [Vitest](https://vitest.dev/) and run in Node with no browser. Run
 | `test/figure.test.ts` | Character figure geometry |
 | `test/app.test.ts` | The HTTP server: health check, static files, paths outside the page folder, malformed URLs, foreign `Host` headers, idle exit |
 | `test/host.test.ts` | Which `Host` headers count as local |
-| `test/pluginBundle.test.ts` | That the committed `plugin/dist/` matches a fresh build, and that the built launcher starts, reuses and stops a server |
+| `test/pluginBundle.test.ts` | That the committed `plugin/dist/` matches a fresh build, that the built launcher starts, reuses and stops a server, and that the npm package holds only the build and its `panoptes` command |
 
 Build log lines inline in the test from synthetic data. Never paste real session logs. They contain code, paths, prompts and sometimes secrets.
 

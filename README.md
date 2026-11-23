@@ -35,7 +35,17 @@ As a Claude Code plugin (needs Node.js 20 or later):
 /panoptes:open
 ```
 
-Or from source:
+### Install the command
+
+To run it without Claude Code, or for the plugin from the plugin directory, install the `panoptes` command (Node.js 20 or later):
+
+```bash
+npm install -g panoptes-office
+panoptes open    # http://127.0.0.1:4317
+panoptes stop
+```
+
+### From source
 
 ```bash
 npm install
